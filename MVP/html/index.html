@@ -1,17 +1,58 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cyclist GO</title>
-
-    <link rel="stylesheet" href="css/style.css">
-</head>
-
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width,initial-scale=1">
+        <meta name="theme-colour" content="#0875ed" />
+        <title>Cyclist Go — Find yourr way</title>
+        <meta 
+        name="description" 
+        content="Compare safety-focused, quick and scenic cycling routes. Explore hazards and try a simulated ride."
+        />
+        <link rel="stylesheet" href="vendor/leaflet.css">
+        <link rel="stylesheet" href="base.css">
+        <link rel="stylesheet" href="planner.css" />
+        <link rel="stylesheet" href="map.css" />
+        <link rel="stylesheet" href="hazards.css" />
+        <link rel="stylesheet" href="ride.css" />
+        <link rel="stylesheet" href="preferences.css" />
+        <script defer src="vendor/leaflet.js"></script>
+        <script defer src="data/bcc-dats.js"></script>
+        <script defer src="routes.js"></script>
+        <script defer src="core.js"></script>
+        <script defer src="planner.js"></script>
+        <script defer src="map.js"></script>
+        <script defer src="hazards.js"></script>
+        <script defer src="ride.js"></script>
+        <script defer src="preferences.js"></script>
+        <script defer src="app.js"></script>
+    </head>
 <body>
-
-    <h1>Cyclist GO</h1>
-
-    <script src="js/app.js"></script>
-</body>
-</html>
+    <header>
+        <a class="brand" href="index.html"
+        ><span class="brand-icon">↗</span> Cyclist Go<span class="demo"
+          >DEMO</span
+        ></a
+        ><button class="text-button" id="about-button">About this demon</button>
+    </header>
+    <main>
+        <aside class="planner">
+            <nav class="steps" aria-lable="Ride progress">
+                <span data-step="plan" class="active">1 <b>Destination</b>b></span><span data-step="compare">2 <b>Choose route</b></span>><span data-step="ride">3 <b>Ride</b></span>
+            </nav>
+            <section id="plan-view">
+                <p class="eyebrow">YOUR NEXT RIDE</p>
+                <h1>Where are you<br />heading?></h1>
+                <p class="lead">Choose your priorities. Follow the mapped network.</p>
+                <span class="source-pill"
+                  >Route calculations: Brisbane City Council data</span>
+                <form id="planner=form">
+                    <div class="journey">
+                        <label
+                          ><span class="point">A</span><span>Starting from<input value="Milton · Bicentennial Bikeway"
+                          readonly
+                          aria-label="Fixed starting point: Milton BCC cycleway" /></span></label>
+                        <label
+                    </div>
+                </form>
+            </section>
