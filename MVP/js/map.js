@@ -113,6 +113,8 @@ function fit() {
     });
   else state.map.setView([-27.473, 153.019], 13);
 }
+// Data source: Brisbane City Council Bikeway Sections, CC BY 4.0
+// https://data.brisbane.qld.gov.au/explore/dataset/bikeway-sections/
 function loadBikeways() {
   if (!state.map) return;
   if (!state.bccLoaded) {
