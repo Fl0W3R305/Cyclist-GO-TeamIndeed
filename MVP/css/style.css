@@ -1,9 +1,31 @@
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-
 body {
     font-family: Arial, sans-serif;
+    background-color: #f4f7f5;
+    margin: 0;
+    padding: 30px;
+}
+
+.hazard-section {
+    max-width: 500px;
+    padding: 20px;
+    background-color: white;
+    border: 1px solid #cccccc;
+    border-radius: 10px;
+}
+
+.hazard-section li {
+    margin: 10px 0;
+}
+
+.hazard-section button {
+    padding: 10px 15px;
+    color: white;
+    background-color: #198754;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.hazard-section button:hover {
+    background-color: #146c43;
 }
