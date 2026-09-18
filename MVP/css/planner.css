@@ -1,0 +1,218 @@
+/* planner module styles — see TEAM_ALLOCATION.md */
+.journey {
+  border: 1px solid #cfddea;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #fcfdff;
+}
+.journey label {
+  display: flex;
+  gap: 13px;
+  align-items: center;
+  padding: 15px;
+}
+.journey label + label {
+  border-top: 1px solid var(--line);
+}
+.journey label > span:last-child {
+  font-size: 12px;
+  color: var(--muted);
+  flex: 1;
+  min-width: 0;
+}
+.point {
+  width: 25px;
+  height: 25px;
+  border-radius: 50%;
+  border: 1.5px solid #a8bccf;
+  color: #66849e;
+  font-size: 12px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+.point.finish {
+  color: white;
+  background: var(--blue);
+  border: 0;
+}
+.journey input {
+  display: block;
+  width: 100%;
+  border: 0;
+  padding: 5px 0 0;
+  color: #182f47;
+  background: transparent;
+  font-size: 15px;
+  line-height: 1.5;
+}
+.suggestions {
+  display: grid;
+  gap: 8px;
+  margin: 17px 0 24px;
+}
+.suggestion {
+  background: #fff;
+  border: 1px solid var(--line);
+  padding: 13px 14px;
+  display: flex;
+  text-align: left;
+  gap: 12px;
+  border-radius: 10px;
+  align-items: center;
+  color: inherit;
+}
+.suggestion.chosen {
+  border-color: var(--blue);
+  background: #f0f7ff;
+}
+.suggestion > span:first-child {
+  background: #edf4fa;
+  color: #517899;
+  border-radius: 9px;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  font-size: 20px;
+}
+.suggestion strong {
+  font-size: 14px;
+}
+.suggestion small {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 4px;
+}
+.suggestion .arrow {
+  margin-left: auto;
+  color: #7892a9;
+}
+.intro-note {
+  display: flex;
+  gap: 13px;
+  margin: 30px 0;
+  padding: 21px 0;
+  border-top: 1px solid var(--line);
+}
+.intro-symbol {
+  font-size: 30px;
+  color: #0875ed;
+}
+.intro-note strong {
+  font-size: 15px;
+}
+.intro-note p {
+  font-size: 14px;
+  color: var(--muted);
+  line-height: 1.6;
+  margin: 6px 0;
+}
+.destination-label {
+  font-size: 14px;
+  color: var(--muted);
+  line-height: 1.6;
+  margin: 0 0 18px;
+}
+.route-card {
+  display: block;
+  width: 100%;
+  background: white;
+  border: 1.5px solid var(--line);
+  border-radius: 12px;
+  padding: 16px;
+  margin: 10px 0;
+  text-align: left;
+  color: inherit;
+  position: relative;
+}
+.route-card[aria-pressed="true"] {
+  background: #f3f8ff;
+  border-color: var(--route-color);
+  box-shadow: 0 0 0 1px var(--route-color);
+}
+.card-top {
+  display: flex;
+  gap: 9px;
+  align-items: center;
+}
+.card-top .selection-dot {
+  margin-left: auto;
+  width: 17px;
+  height: 17px;
+  border: 1px solid #b6c8d8;
+  border-radius: 50%;
+}
+.route-card[aria-pressed="true"] .selection-dot {
+  border: 5px solid var(--route-color);
+}
+.metrics {
+  font-size: 25px;
+  font-weight: 750;
+  letter-spacing: -0.7px;
+  margin: 11px 0 6px;
+}
+.metrics span {
+  font-size: 14px;
+  font-weight: 400;
+  color: #48647c;
+  letter-spacing: 0;
+}
+.card-bottom {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: #637990;
+  margin-top: 11px;
+}
+.card-description {
+  font-size: 13px;
+  margin: 5px 0;
+  color: #547089;
+  line-height: 1.5;
+}
+.route-detail {
+  border-left: 3px solid #cee3fc;
+  padding-left: 12px;
+  margin: 18px 0;
+  line-height: 1.6;
+  font-size: 14px;
+  color: #526b80;
+}
+.route-detail p {
+  margin: 7px 0;
+}
+.route-detail details {
+  font-size: 13px;
+}
+.sticky-action {
+  position: sticky;
+  bottom: 0;
+  background: linear-gradient(#ffffffed, #fff 25%);
+  padding: 20px 0 8px;
+  margin-top: 8px;
+  z-index: 2;
+}
+.sticky-action p {
+  text-align: center;
+  font-size: 12px;
+  color: #6b7e91;
+  margin: 9px 0;
+}
+@media (max-width: 650px) {
+  .intro-note {
+    margin-bottom: 18px;
+  }
+  .sticky-action {
+    padding-top: 16px;
+    padding-bottom: max(8px, env(safe-area-inset-bottom));
+    margin: 0 -20px;
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+  .intro-note p {
+    margin-bottom: 0;
+  }
+}
