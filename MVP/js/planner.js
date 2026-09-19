@@ -3,6 +3,7 @@ function renderSuggestions() {
   const query = $("destination").value.toLowerCase().trim();
   const matches = D.destinations.filter(
     (d) =>
+      state.destination ||
       !query ||
       d.name.toLowerCase().includes(query) ||
       d.aliases.includes(query),
