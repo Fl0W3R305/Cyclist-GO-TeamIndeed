@@ -1,0 +1,369 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="theme-color" content="#0875ed" />
+    <title>Cyclist Go -- Find your way</title>
+    <meta
+      name="description"
+      content="Compare safety-focused, quick and scenic cycling routes. Explore hazards and try a simulated ride."
+    />
+    <link rel="stylesheet" href="vendor/leaflet.css" />
+    <link rel="stylesheet" href="base.css" />
+    <link rel="stylesheet" href="planner.css" />
+    <link rel="stylesheet" href="map.css" />
+    <link rel="stylesheet" href="hazards.css" />
+    <link rel="stylesheet" href="ride.css" />
+    <link rel="stylesheet" href="preferences.css" />
+    <script defer src="vendor/leaflet.js"></script>
+    <script defer src="data/bcc-data.js"></script>
+    <script defer src="routes.js"></script>
+    <script defer src="core.js"></script>
+    <script defer src="planner.js"></script>
+    <script defer src="map.js"></script>
+    <script defer src="hazards.js"></script>
+    <script defer src="ride.js"></script>
+    <script defer src="preferences.js"></script>
+    <script defer src="app.js"></script>
+  </head>
+  <body>
+    <header>
+      <a class="brand" href="index.html"
+        ><span class="brand-icon">↗</span>Cyclist Go<span class="demo"
+          >DEMO</span
+        ></a
+      ><button class="text-button" id="about-button">About this demo</button>
+    </header>
+    <main>
+      <aside class="planner">
+        <nav class="steps" aria-label="Ride progress">
+          <span data-step="plan" class="active">1 <b>Destination</b></span
+          ><span data-step="compare">2 <b>Choose route</b></span
+          ><span data-step="ride">3 <b>Ride</b></span>
+        </nav>
+        <section id="plan-view">
+          <p class="eyebrow">YOUR NEXT RIDE</p>
+          <h1>Where are you<br />heading?</h1>
+          <p class="lead">Choose your priorities. Follow the mapped network.</p>
+          <span class="source-pill"
+            >Route calculations: Brisbane City Council data</span
+          >
+          <form id="planner-form">
+            <div class="journey">
+              <label
+                ><span class="point">A</span
+                ><span
+                  >Starting from<input
+                    value="Milton · Bicentennial Bikeway"
+                    readonly
+                    aria-label="Fixed starting point: Milton BCC cycleway" /></span></label
+              ><label
+                ><span class="point finish">B</span
+                ><span
+                  >Destination<input
+                    id="destination"
+                    placeholder="Search a demo destination"
+                    autocomplete="off"
+                    required
+                    aria-describedby="destination-help" /></span
+              ></label>
+            </div>
+            <p class="muted" id="destination-help">
+              Choose one of the 3 Brisbane destinations below.
+            </p>
+            <div
+              id="suggestions"
+              class="suggestions"
+              aria-label="Available destinations"
+            ></div>
+            <p id="form-error" role="alert" class="error" hidden></p>
+            <div data-preference-panel></div>
+            <button class="primary" type="submit">
+              Find my routes <span>→</span>
+            </button>
+          </form>
+          <div class="intro-note">
+            <span class="intro-symbol">⌁</span>
+            <div>
+              <strong>Your ride, your priorities.</strong>
+              <p>
+                Compare safety-focused, quick and scenic options before you set
+                off.
+              </p>
+            </div>
+          </div>
+        </section>
+        <section id="compare-view" hidden>
+          <button class="back" id="edit-destination">
+            ← Change destination
+          </button>
+          <h1 class="small-title">Choose your route</h1>
+          <p class="destination-label"></p>
+          <div class="section-title">
+            <h2>Three route preferences</h2>
+            <span>Tap to explore</span>
+          </div>
+          <div data-preference-panel></div>
+          <div
+            id="preference-results"
+            class="preference-results"
+            role="status"
+            aria-live="polite"
+          ></div>
+          <div id="route-cards"></div>
+          <div id="route-detail"></div>
+          <div class="section-title">
+            <h2>Along this route</h2>
+            <span class="sample-badge">Demo + your reports</span>
+          </div>
+          <div class="filters" aria-label="Hazard filters">
+            <button data-filter="all" aria-pressed="true">All</button
+            ><button data-filter="reported" aria-pressed="false">
+              Reported</button
+            ><button data-filter="potential" aria-pressed="false">
+              Potential
+            </button>
+          </div>
+          <div id="hazard-list"></div>
+          <div class="sticky-action">
+            <button id="start-ride" class="primary">
+              Start demo ride <span>→</span>
+            </button>
+            <p>Simulated ride · No live navigation</p>
+          </div>
+        </section>
+        <section id="ride-view" hidden>
+          <p class="eyebrow">DEMO RIDE · SIMULATED POSITION</p>
+          <h1 class="small-title" id="ride-title">Let's ride.</h1>
+          <p class="destination-label"></p>
+          <div class="ride-card">
+            <div class="ride-metrics">
+              <div>
+                <strong id="remaining-min">0</strong><span>min left</span>
+              </div>
+              <div>
+                <strong id="remaining-km">0</strong><span>km left</span>
+              </div>
+            </div>
+            <progress
+              id="ride-progress"
+              max="1"
+              value="0"
+              aria-label="Ride progress"
+            ></progress>
+            <p id="ride-road">Following selected route</p>
+          </div>
+          <div id="next-hazard" class="next-hazard"></div>
+          <div class="ride-controls">
+            <button id="play-ride" class="secondary">▶ Play simulation</button
+            ><button id="advance-ride" class="secondary">Forward 200 m</button>
+          </div>
+          <p class="muted">
+            Simulation runs at 30× speed. Pause to explore or report.
+          </p>
+          <div class="section-title"><h2>Something on the path?</h2></div>
+          <p class="muted">
+            Choose a hazard, then send. The position is filled in for you.
+          </p>
+          <div id="quick-types" class="type-grid"></div>
+          <button id="report-button" class="primary report-action">
+            ＋ Report a hazard</button
+          ><button id="finish-ride" class="text-button finish-button">
+            End demo ride
+          </button>
+        </section>
+        <section id="summary-view" hidden>
+          <div class="success-icon">✓</div>
+          <p class="eyebrow">DEMO RIDE COMPLETE</p>
+          <h1>Nice riding.</h1>
+          <p class="destination-label"></p>
+          <div id="summary-content"></div>
+          <button id="ride-again" class="primary">Plan another ride →</button>
+        </section>
+      </aside>
+      <section class="map-section" aria-label="Interactive cycling map">
+        <div id="map"></div>
+        <div class="map-top">
+          <span id="map-label" class="map-label">BRISBANE, QLD</span
+          ><button id="fit" class="map-button">⌖ Fit route</button>
+        </div>
+        <div id="map-error" role="status" hidden></div>
+        <div class="map-bottom">
+          <div class="map-legend">
+            <span><i class="legend-dot reported"></i>Reported</span
+            ><span><i class="legend-dot potential"></i>Potential</span
+            ><label
+              ><input
+                type="checkbox"
+                id="hazards-toggle"
+                checked
+              />Hazards</label
+            ><label
+              ><input type="checkbox" id="bikeway-toggle" />BCC network</label
+            >
+          </div>
+          <p id="data-status" role="status"></p>
+          <div class="map-caption">
+            BCC planning routes · Sample hazards · Not live navigation
+          </div>
+        </div>
+      </section>
+    </main>
+    <dialog id="report-dialog" aria-labelledby="report-title">
+      <div class="dialog-heading">
+        <div>
+          <p class="eyebrow">HELP THE NEXT RIDER</p>
+          <h2 id="report-title">Report a hazard</h2>
+        </div>
+        <button
+          class="icon-button"
+          data-close="report-dialog"
+          aria-label="Close report"
+        >
+          ×
+        </button>
+      </div>
+      <p class="muted">Stop somewhere safe before reporting on a real ride.</p>
+      <div id="report-types" class="type-grid"></div>
+      <div class="location-row">
+        <span>⌖</span>
+        <div>
+          <strong>At your demo position</strong
+          ><small id="report-location"></small>
+        </div>
+      </div>
+      <details class="report-details">
+        <summary>Add details or change position</summary>
+        <label
+          >Report as<select id="report-kind">
+            <option value="reported">Observed hazard</option>
+            <option value="potential">Potential risk</option>
+          </select></label
+        ><label
+          >Impact<select id="report-severity">
+            <option value="Caution">Caution</option>
+            <option value="Slow down">Slow down</option>
+            <option value="Path blocked">Path blocked</option>
+          </select></label
+        ><label
+          >Location along route<input
+            id="report-position"
+            type="range"
+            min="0"
+            max="1000"
+            step="1" /></label
+        ><label
+          >Optional note<textarea
+            id="report-note"
+            maxlength="180"
+            placeholder="e.g. Loose gravel near the bend"
+          ></textarea>
+        </label>
+      </details>
+      <button id="submit-report" class="primary" disabled>
+        Select a hazard above
+      </button>
+      <p class="muted local-note">
+        Saved on this browser. No public report is sent.
+      </p>
+    </dialog>
+    <dialog id="hazard-dialog" aria-labelledby="hazard-title">
+      <div class="dialog-heading">
+        <h2 id="hazard-title">Hazard details</h2>
+        <button
+          class="icon-button"
+          data-close="hazard-dialog"
+          aria-label="Close hazard details"
+        >
+          ×
+        </button>
+      </div>
+      <div id="hazard-dialog-content"></div>
+    </dialog>
+    <dialog id="about-dialog" aria-labelledby="about-title">
+      <div class="dialog-heading">
+        <h2 id="about-title">About this demo</h2>
+        <button
+          class="icon-button"
+          data-close="about-dialog"
+          aria-label="Close about"
+        >
+          ×
+        </button>
+      </div>
+      <p>
+        Every route and preference calculation uses Brisbane City Council data.
+        The base map is supplied by OpenStreetMap for display only and is never
+        read by the routing algorithm.
+      </p>
+      <p>
+        Routes connect shared vertices in BCC Bikeway sections and the LGIP
+        Existing Bikeway dataset. No missing connection is drawn. This planning
+        graph does not contain current closures, legal direction or turning
+        restrictions and is not a turn-by-turn navigation service.
+      </p>
+      <p>
+        Arrivals are nearby BCC cycleway nodes, not building entrances. Three
+        preference modes can select the same path when the data favours it.
+      </p>
+      <p>
+        Protected bikeways uses mapped off-road length as a proxy; physical
+        barriers are not verified. Traffic is a saved BCC signal-flow snapshot
+        from 15 Sep 2026, not live traffic. Hills use terrain estimates from
+        2002 contours; bridge decks and tunnels are excluded. Check each route’s
+        coverage.
+      </p>
+      <p>
+        Hazards are explicitly labelled sample scenarios or your local reports.
+        They do not affect BCC route calculations. Ride movement is simulated;
+        no GPS is used.
+      </p>
+      <p>
+        <a
+          href="https://data.brisbane.qld.gov.au/explore/dataset/bikeway-sections/"
+          target="_blank"
+          rel="noopener"
+          >BCC Bikeway sections</a
+        >
+        ·
+        <a
+          href="https://data.brisbane.qld.gov.au/explore/dataset/cp14-lgip-pfti-active-and-public-transport-existing-bikeway/"
+          target="_blank"
+          rel="noopener"
+          >BCC Existing Bikeway</a
+        >
+        ·
+        <a
+          href="https://data.brisbane.qld.gov.au/explore/dataset/traffic-data-at-intersection/"
+          target="_blank"
+          rel="noopener"
+          >BCC Intersection volume</a
+        >
+        ·
+        <a
+          href="https://data.brisbane.qld.gov.au/explore/dataset/traffic-management-intersection-locations-reference/"
+          target="_blank"
+          rel="noopener"
+          >BCC Intersection locations</a
+        >
+        ·
+        <a
+          href="https://data.brisbane.qld.gov.au/explore/dataset/contours-2002-download-files/"
+          target="_blank"
+          rel="noopener"
+          >BCC Contours 2002</a
+        >
+      </p>
+      <p>
+        © Brisbane City Council, CC BY 4.0. Map © OpenStreetMap contributors.
+        Leaflet 1.9.4, BSD-2-Clause. Full methodology: DATA_SOURCES.md in the
+        ZIP.
+      </p>
+    </dialog>
+    <div id="toast" role="status" hidden>
+      <span id="toast-text"></span><button id="undo-report" hidden>Undo</button
+      ><button id="dismiss-toast" aria-label="Dismiss notification">×</button>
+    </div>
+  </body>
+</html>
