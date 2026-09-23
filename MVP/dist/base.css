@@ -295,6 +295,15 @@ a {
   color: var(--muted);
   line-height: 1.6;
 }
+.project-documents {
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid #999;
+}
+
+.project-documents h3 {
+    margin: 0 0 14px;
+}
 @media (min-width: 1450px) {
   main {
     grid-template-columns: 465px 1fr;
