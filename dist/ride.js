@@ -1,5 +1,6 @@
 /* Person 5 — ride module. See TEAM_ALLOCATION.md. */
 function startRide() {
+  if (!current()) return;
   $("toast").hidden = true;
   state.undo = null;
   state.progress = 0;
@@ -26,6 +27,7 @@ function startRide() {
 }
 function updateRide() {
   const r = current();
+  if (!r) return;
   const remaining = r.length * (1 - state.progress);
   $("remaining-min").textContent =
     remaining > 0 ? Math.ceil(r.minutes * (1 - state.progress)) : 0;
@@ -35,7 +37,7 @@ function updateRide() {
     `${(r.km * state.progress).toFixed(1)} of ${r.km.toFixed(1)} km · ${r.name.toLowerCase()} route`;
   state.rider?.setLatLng(D.pointAt(r, state.progress));
   const next = routeHazards().find(
-    (h) => h.fraction >= state.progress && state.votes[h.id] !== "gone",
+    (h) => h.fraction >= state.progress && !["gone", "ignored"].includes(state.votes[h.id]),
   );
   if (next) {
     const t = hazardType(next);
@@ -45,6 +47,9 @@ function updateRide() {
     $("next-hazard").textContent = "No more demo hazards ahead on this route.";
   $("advance-ride").disabled = state.progress >= 1;
   $("play-ride").disabled = state.progress >= 1;
+  $("report-button").disabled = Boolean(state.timer);
+  $("complete-paused-report").disabled = Boolean(state.timer);
+  $("report-button").textContent = state.timer ? "Pause before recording a hazard" : "＋ Save location for later report";
   if (state.progress >= 1) {
     pause();
     $("ride-title").textContent = "You’ve arrived.";
@@ -59,6 +64,9 @@ function pause() {
   clearInterval(state.timer);
   state.timer = null;
   $("play-ride").textContent = "▶ Play simulation";
+  $("report-button").disabled = false;
+  $("complete-paused-report").disabled = false;
+  $("report-button").textContent = "＋ Save location for later report";
 }
 function play() {
   if (state.timer) {
@@ -68,12 +76,16 @@ function play() {
   if (state.progress >= 1) return;
   $("play-ride").textContent = "Ⅱ Pause simulation";
   state.timer = setInterval(() => advance((15000 / 3600) * 30), 1000);
+  updateRide();
 }
 function finishRide() {
   pause();
   showView("summary");
+  renderSummary();
+}
+function renderSummary() {
   $("summary-content").innerHTML =
-    `<p><span class="summary-number">${(current().km * state.progress).toFixed(1)} km</span><br>Simulated distance travelled</p><p><b>${state.rideReportCount}</b> report${state.rideReportCount === 1 ? "" : "s"} added during this ride.<br>${storageOK ? "Your reports are saved in this browser." : "Reports will only remain in this session."}</p><p class="muted">${state.progress >= 1 ? "Destination reached." : "Ride ended before the destination."} This was a simulation, not a recorded real ride.</p>`;
+    `<p><span class="summary-number">${(current().km * state.progress).toFixed(1)} km</span><br>Simulated distance travelled</p><p><b>${state.rideReportCount}</b> report${state.rideReportCount === 1 ? "" : "s"} added during this ride.<br>${storageOK ? "Your reports are saved in this browser." : "Reports will only remain in this session."}</p><p class="muted">${state.progress >= 1 ? "Destination reached." : "Ride ended before the destination."} This was a simulation, not a recorded real ride.</p><h2>Locations saved for later</h2>${state.drafts.filter(d => d.destination === state.destination && d.signature === current().signature).map(d => `<p>${(d.fraction*current().km).toFixed(2)} km along this route <button class="secondary" data-complete-draft="${d.id}">Complete report</button> <button class="text-button" data-discard-draft="${d.id}">Discard</button></p>`).join("") || "<p>No pending locations on this route.</p>"}<h2>Review hazards after your ride</h2>${routeHazards().filter(h => state.votes[h.id] !== "ignored").map(h => `<p><button class="secondary" data-hazard="${h.id}">${hazardType(h).name} · ${h.sample ? "Sample scenario" : "Your report"}</button></p>`).join("")}`;
 }
 function setupRide() {
   $("start-ride").addEventListener("click", () => {

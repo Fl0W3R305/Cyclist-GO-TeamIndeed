@@ -1,3 +1,4 @@
+/* Person 3 — map module. See TEAM_ALLOCATION.md. */
 function initMap() {
   if (!window.L) {
     $("map-error").hidden = false;
@@ -6,10 +7,10 @@ function initMap() {
     return;
   }
   state.map = L.map("map", { zoomControl: false }).setView(
-    [-27.473, 153.019],
+    D.start,
     13,
   );
-  //L.control.zoom({ position: "bottomright" }).addTo(state.map);
+  L.control.zoom({ position: "bottomright" }).addTo(state.map);
   state.hazardLayer = L.layerGroup().addTo(state.map);
   state.endpointLayer = L.layerGroup().addTo(state.map);
   state.bikeways = L.geoJSON(null, {
@@ -41,7 +42,7 @@ function drawEndpoints() {
   if (!state.map) return;
   state.endpointLayer.clearLayers();
   [
-    [D.start, "A", "Milton cycleway start"],
+    [D.start, "A", "Indooroopilly Shopping Centre · mapped start"],
     ...(current() ? [[current().points.at(-1), "B", dest().name]] : []),
   ].forEach(([p, label, name]) =>
     L.marker(p, {
@@ -66,12 +67,13 @@ function drawRoutes() {
   );
   ordered.forEach((r) => {
     if (state.view === "ride" && r.id !== state.selected) return;
-    if (state.view === "compare" && !Preferences.accepts(r)) return;
+    // Alternatives remain visible even if a filter excludes their cards.
     const active = r.id === state.selected;
     const line = L.polyline(r.points, {
       color: r.color,
       weight: active ? 6 : 4,
-      opacity: active ? 1 : 0.28,
+      opacity: active ? 0.9 : 0.28,
+      dashArray: Preferences.accepts(r) ? null : "6 8",
       smoothFactor: 0,
     })
       .bindTooltip(`${r.name} · ${r.minutes} min · ${r.km.toFixed(1)} km`)
@@ -79,6 +81,9 @@ function drawRoutes() {
       .addTo(state.map);
     state.routeLayers.push(line);
   });
+  if ($("sections-toggle").checked) drawRouteSections();
+  $("section-legend").hidden = !$("sections-toggle").checked;
+  drawClimbs();
   drawHazards();
 }
 function drawHazards() {
@@ -86,7 +91,7 @@ function drawHazards() {
   state.hazardLayer.clearLayers();
   if (!$("hazards-toggle").checked) return;
   const hs = state.view === "ride" ? routeHazards() : visibleHazards();
-  hs.forEach((h) => {
+  hs.filter(h => state.votes[h.id] !== "ignored").forEach((h) => {
     const t = hazardType(h);
     const marker = L.marker(h.point, {
       icon: L.divIcon({
@@ -111,41 +116,23 @@ function fit() {
       paddingBottomRight: [50, 95],
       maxZoom: 16,
     });
-  else state.map.setView([-27.473, 153.019], 13);
+  else state.map.setView(D.start, 13);
 }
-// Data source: Brisbane City Council Bikeway Sections, CC BY 4.0
-// https://data.brisbane.qld.gov.au/explore/dataset/bikeway-sections/
 function loadBikeways() {
   if (!state.map) return;
   if (!state.bccLoaded) {
     const data = window.BCC_DATA;
-    const features = data.edges.map((e) => {
-      const r = data.records[e[3]];
-      return {
-        type: "Feature",
-        geometry: {
-          type: "LineString",
-          coordinates: [data.nodes[e[0]], data.nodes[e[1]]].map((p) => [
-            p[1],
-            p[0],
-          ]),
-        },
-        properties: {
-          street_name: r.street,
-          bikeway_on_off_road_desc: r.position,
-          source_id: r.id,
-        },
-      };
-    });
+    const features = data.bccNetwork;
     state.bikeways.addData({ type: "FeatureCollection", features });
     state.bccLoaded = true;
   }
   $("data-status").textContent =
-    `BCC snapshot · ${BCC_DATA.meta.graphEdges} connected edges · ${BCC_DATA.meta.retrieved}`;
+    `BCC bikeway layer · ${BCC_DATA.bccNetwork.length} source features · ${BCC_DATA.meta.retrieved}`;
   if ($("bikeway-toggle").checked) state.bikeways.addTo(state.map);
 }
 function setupMap() {
   $("fit").addEventListener("click", fit);
+  $("sections-toggle").addEventListener("change", drawRoutes);
   $("hazards-toggle").addEventListener("change", drawHazards);
   $("bikeway-toggle").addEventListener("change", (e) => {
     if (!state.map) return;
@@ -153,4 +140,21 @@ function setupMap() {
     else state.bikeways.remove();
   });
   initMap();
+}
+
+function drawRouteSections() {
+ const r=current(); if(!state.map || !r) return;
+ const d=BCC_DATA;
+ r.edgeIds.forEach((ei,i)=>{
+   const record=d.records[d.edges[ei][3]];
+   const label=record.position === "OFF ROAD" ? "Off-road" : record.position === "ON ROAD" ? "On-road" : record.type ? "Other identified bikeway" : "Unknown";
+   const color={"Off-road":"#078773","On-road":"#a66a00","Other identified bikeway":"#0875ed","Unknown":"#718294"}[label];
+   state.routeLayers.push(L.polyline([r.points[i],r.points[i+1]],{color,weight:5,opacity:1,dashArray:label==="Unknown"?"5 5":null,smoothFactor:0}).bindTooltip(`${label} · ${record.name || record.street || "No BCC bikeway match"}`).addTo(state.map));
+ });
+}
+function drawClimbs() {
+ const r=current(); if(!state.map || !r) return;
+ (r.indicators?.hill.climbs || []).forEach((c,i)=>{
+   state.routeLayers.push(L.marker(D.pointAt(r,c.start/r.length),{icon:L.divIcon({className:"climb-pin",html:"▲",iconSize:[24,24]}),title:`Estimated climb ${i+1}`}).bindPopup(`Estimated climb ${i+1}: ${c.rise.toFixed(1)} m rise, up to ${c.maxGrade.toFixed(1)}% · BCC 2002 ground contours`).addTo(state.map));
+ });
 }
