@@ -295,15 +295,6 @@ a {
   color: var(--muted);
   line-height: 1.6;
 }
-.project-documents {
-    margin-top: 24px;
-    padding-top: 20px;
-    border-top: 1px solid #999;
-}
-
-.project-documents h3 {
-    margin: 0 0 14px;
-}
 @media (min-width: 1450px) {
   main {
     grid-template-columns: 465px 1fr;
@@ -379,3 +370,9 @@ a {
     transition: none !important;
   }
 }
+
+/* Separate restored acknowledgements and document downloads. */
+#about-dialog .ai-declaration details { margin: 12px 0; }
+#about-dialog .ai-declaration summary { cursor: pointer; font-weight: 600; }
+#about-dialog .project-documents { margin-top: 24px; padding-top: 20px; border-top: 1px solid #999; }
+#about-dialog .project-documents h3 { margin: 0 0 14px; }

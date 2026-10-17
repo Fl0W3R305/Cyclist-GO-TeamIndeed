@@ -1,96 +1,148 @@
-"""Person 3: prepare BCC snapshots. Does not draw connectors or use external routing.
-Input directory must contain BCC exports; see DATA_SOURCES.md.
-python3 scripts/build_data.py INPUT_DIR
-Dependencies: scipy, shapely. These are build-time only.
+"""Build the Indooroopilly demo from saved OSM/BRouter routes and BCC inputs.
+Usage: python3 scripts/build_data.py INPUT_DIR
+Build dependencies: numpy scipy shapely. No routing requests at page load.
 """
-import json,math,pathlib,sys,collections,datetime
+import json,math,pathlib,sys,datetime
+import numpy as np
 from scipy.spatial import cKDTree
-from shapely.geometry import LineString,box
-root=pathlib.Path(__file__).resolve().parents[1]; inputs=pathlib.Path(sys.argv[1]) if len(sys.argv)>1 else root.parent
-rows=json.loads((inputs/'bcc-network.json').read_text()); extra=json.loads((inputs/'bcc-existing-network.json').read_text())
-nodes=[];ids={};edges=[];adj=collections.defaultdict(set);records=[];seen={}
-def node(p):
- key=tuple(round(float(x),7) for x in p[:2])
- if key not in ids:ids[key]=len(nodes);nodes.append([key[1],key[0]])
- return ids[key]
-def dist(a,b):
- rad=math.pi/180; q=math.sin((b[0]-a[0])*rad/2)**2+math.cos(a[0]*rad)*math.cos(b[0]*rad)*math.sin((b[1]-a[1])*rad/2)**2
- return 6371000*2*math.atan2(math.sqrt(q),math.sqrt(max(0,1-q)))
+from shapely.geometry import LineString,Point,box
+from shapely.strtree import STRtree
+from shapely import line_interpolate_point, get_coordinates
+root=pathlib.Path(__file__).resolve().parents[1]; inputs=pathlib.Path(sys.argv[1])
+read=lambda name:json.loads((inputs/name).read_text())
+def distance(a,b):
+ rad=math.pi/180;q=math.sin((b[0]-a[0])*rad/2)**2+math.cos(a[0]*rad)*math.cos(b[0]*rad)*math.sin((b[1]-a[1])*rad/2)**2
+ return 12742000*math.atan2(math.sqrt(q),math.sqrt(max(0,1-q)))
+def xy(p):return [p[0]*99000,p[1]*111000]
+rows=read('bcc-network.json');extra=read('bcc-existing-network.json')
+segments=[];segment_records=[];bccNetwork=[]
 for kind,source in [('assets',rows),('existing',extra)]:
  for r in source:
-  ri=len(records);records.append({'id':r['objectid'],'dataset':kind,'type':r.get('traffic_types_description'),'position':r.get('bikeway_on_off_road_desc'),'level':r.get('locations_description'),'name':r.get('bikeway_name'),'street':r.get('street_name'),'width':r.get('bikeway_width')})
-  g=r['geo_shape']['geometry']; lines=[g['coordinates']] if g['type']=='LineString' else g['coordinates']
+  g=r['geo_shape']['geometry'];lines=[g['coordinates']] if g['type']=='LineString' else g['coordinates']
+  props={'id':r['objectid'],'dataset':kind,'type':r.get('traffic_types_description'),'position':r.get('bikeway_on_off_road_desc'),'level':r.get('locations_description'),'name':r.get('bikeway_name'),'street':r.get('street_name')}
+  bccNetwork.append({'type':'Feature','geometry':g,'properties':{'street_name':props['street'],'bikeway_on_off_road_desc':props['position'],'source_id':props['id']}})
+  if kind!='assets':continue
   for line in lines:
-   ns=[node(p) for p in line]
-   for a,b in zip(ns,ns[1:]):
-    if a==b:continue
-    key=tuple(sorted([a,b]))
-    if key in seen:continue
-    seen[key]=len(edges);edges.append([a,b,round(dist(nodes[a],nodes[b]),3),ri]);adj[a].add(b);adj[b].add(a)
-# Only coordinate-identical BCC vertices (rounded to 7 decimals) are joined.
-# No nearest-road snapping, invented bridge, planar-crossing noding or straight-line gap filling.
-start_ref=[-27.4735,153.005];start=min(range(len(nodes)),key=lambda i:dist(nodes[i],start_ref));component={start};todo=[start]
-while todo:
- for v in adj[todo.pop()]:
-  if v not in component:component.add(v);todo.append(v)
-old=sorted(component);nm={v:i for i,v in enumerate(old)};nodes2=[nodes[v] for v in old];edges2=[[nm[a],nm[b],m,r] for a,b,m,r in edges if a in component and b in component]
-used=sorted({e[3] for e in edges2});rm={r:i for i,r in enumerate(used)};records2=[records[r] for r in used]
-for e in edges2:e[3]=rm[e[3]]
-start=nm[start]
-destinations=[]
-for key,name,reference,aliases in [('qut','QUT Gardens Point',[-27.4773,153.028],'qut gardens point botanic gardens'),('qagoma','QAGOMA',[-27.4724,153.0186],'qagoma goma gallery cultural centre'),('northquay','North Quay',[-27.470,153.021],'north quay northquay city')]:
- n=min(range(len(nodes2)),key=lambda i:dist(nodes2[i],reference));offset=round(dist(nodes2[n],reference))
- assert offset<150,(key,offset)
- destinations.append({'id':key,'name':name,'detail':f'BCC cycleway arrival · {offset} m from landmark','aliases':aliases,'icon':'↗','node':n,'reference':reference,'offset':offset})
-intersections=json.loads((inputs/'bcc-intersections-all.json').read_text());volumes=json.loads((inputs/'bcc-volume-all.json').read_text())
-# Keep one latest observation per TSC + approach. mf is vehicles/cycle; ct is seconds/cycle.
+   if len(line)<2:continue
+   segment=LineString([xy(p) for p in line])
+   if segment.length>0:segments.append(segment);segment_records.append(props)
+tree=STRtree(segments)
+def match(a,b,tags):
+ line=LineString([xy(a),xy(b)]);pts=[line.interpolate(t,normalized=True) for t in [.2,.5,.8]];mid=pts[1]
+ vec=np.array(xy(b))-xy(a);norm=np.linalg.norm(vec)
+ best=None;bestdist=12
+ highway=tags.get('highway','');structure=tags.get('bridge','no')!='no' or tags.get('tunnel','no')!='no'
+ for index in tree.query(mid.buffer(12)):
+  r=segment_records[index];seg=segments[index]
+  if structure and r['level'] not in ['ON STRUCTURE','UNDER STRUCTURE','IN TUNNEL']:continue
+  if r['position']=='OFF ROAD' and highway not in ['cycleway','path','footway','pedestrian','bridleway']:continue
+  pos=seg.project(mid);other=np.array(seg.interpolate(min(seg.length,pos+5)).coords[0])-seg.interpolate(max(0,pos-5)).coords[0]
+  cosine=abs(float(np.dot(vec,other)))/(norm*np.linalg.norm(other) or 1)
+  if cosine<math.cos(math.radians(25)):continue
+  error=max(seg.distance(p) for p in pts)
+  if error<bestdist:bestdist=error;best=dict(r)
+ if best:best['matchDistance']=round(bestdist,2)
+ return best
+# OSM structure geometry supplements the route service's reduced way tags.
+structure_rows=read('osm-structures.json')['elements']
+structure_lines=[LineString([xy([p['lon'],p['lat']]) for p in r['geometry']]) for r in structure_rows]
+structure_tree=STRtree(structure_lines)
+def structure_tags(a,b,tags):
+ result=dict(tags);line=LineString([xy(a),xy(b)]);pts=[line.interpolate(t,normalized=True) for t in [.2,.5,.8]]
+ for i in structure_tree.query(pts[1].buffer(2)):
+  if max(structure_lines[i].distance(p) for p in pts)<=2:
+   for key in ['bridge','tunnel','name']:
+    if key in structure_rows[i]['tags']:result[key]=structure_rows[i]['tags'][key]
+ return result
+nodes=[];nodeids={};edges=[];records=[];recordids={};edgeids={};prepared={};destinations=[]
+start_ref=[-27.4995,152.9735]
+settings=[('cityhall','Brisbane City Hall',[-27.4689,153.0234],'city hall brisbane king george square'),('uq','UQ St Lucia',[-27.4975,153.0137],'uq university queensland st lucia'),('southbank','South Bank',[-27.4812,153.0235],'southbank south bank parklands')]
+def node(p):
+ k=tuple(p[:2])
+ if k not in nodeids:nodeids[k]=len(nodes);nodes.append([k[1],k[0]])
+ return nodeids[k]
+start=None
+for key,name,ref,aliases in settings:
+ prepared[key]=[]
+ for alt in range(3):
+  doc=read(f'osm-{key}-{alt}.geojson');f=doc['features'][0];coords=[p[:2] for p in f['geometry']['coordinates']]
+  tags=[{} for _ in coords[:-1]];last=0
+  for m in f['properties']['messages'][1:]:
+   t=dict(x.split('=',1) for x in m[9].split() if '=' in x);p=[int(m[0])/1e6,int(m[1])/1e6]
+   end=min(range(last,len(coords)),key=lambda i:(coords[i][0]-p[0])**2+(coords[i][1]-p[1])**2)
+   for j in range(last,end):tags[j]=t
+   last=end
+  if last<len(coords)-1:
+   for j in range(last,len(coords)-1):tags[j]=tags[last-1] if last else {}
+  if any(t.get('route')=='ferry' or t.get('highway') in ['steps','motorway','motorway_link'] for t in tags):raise ValueError('Unacceptable cycling segment')
+  ns=[node(p) for p in coords];es=[]
+  if start is None:start=ns[0]
+  assert start==ns[0], 'All routes must start at the same mapped point'
+  assert len(set(ns))==len(ns),'Route contains a loop'
+  for i,(a,b) in enumerate(zip(coords,coords[1:])):
+   t=structure_tags(a,b,tags[i]);r=match(a,b,t)
+   if not r:r={'id':None,'dataset':'osm','type':None,'position':None,'name':None,'street':None}
+   r['level']='ON STRUCTURE' if t.get('bridge','no')!='no' else 'IN TUNNEL' if t.get('tunnel','no')!='no' else r.get('level') or 'ON GROUND'
+   r['osmTags']=t;r['geometrySource']='OpenStreetMap via BRouter';rkey=json.dumps(r,sort_keys=True)
+   if rkey not in recordids:recordids[rkey]=len(records);records.append(r)
+   ri=recordids[rkey];ek=(ns[i],ns[i+1],ri)
+   if ek not in edgeids:edgeids[ek]=len(edges);edges.append([ns[i],ns[i+1],round(distance(nodes[ns[i]],nodes[ns[i+1]]),3),ri,None,'osm'])
+   es.append(edgeids[ek])
+  prepared[key].append({'nodeIds':ns,'edgeIds':es,'request':doc.get('request_url'),'alternative':alt})
+  print('Prepared',key,alt,len(es),flush=True)
+ endpoint=nodes[ns[-1]];offset=round(distance(endpoint,ref));assert offset<100,(key,offset)
+ destinations.append({'id':key,'name':name,'detail':f'Mapped path arrival · {offset} m from landmark','aliases':aliases,'icon':'↗','node':ns[-1],'reference':ref,'offset':offset})
+# BCC traffic: latest signal-cycle measurement per approach, converted to hourly equivalents.
 latest={}
+volumes=read('bcc-volume-all.json')
 for v in volumes:
  k=(v['tsc'],v['lane'])
  if k not in latest or v['recorded']>latest[k]['recorded']:latest[k]=v
 sites=[]
-for s in intersections:
+for s in read('bcc-intersections-all.json'):
  try:p=[float(s['latitude']),float(s['longitude'])]
- except (TypeError,KeyError):continue
- if not(-27.49<p[0]<-27.46 and 152.99<p[1]<153.04):continue
- samples=[v for (tsc,lane),v in latest.items() if tsc==s['tsc']]
+ except (TypeError,KeyError,ValueError):continue
+ if not(-27.525<p[0]<-27.455 and 152.965<p[1]<153.04):continue
  rates=[];stamps=[]
- for v in samples:
-  try:ct=float(v['ct'])
-  except (TypeError,ValueError):continue
-  if ct<=0:continue
-  values=[]
-  for k in range(1,5):
-   try:value=float(v.get('mf'+str(k)));assert value>=0;values.append(value)
-   except (ValueError,TypeError,AssertionError):pass
-  if values:rates.append(sum(values)/ct*3600);stamps.append(v['recorded'])
- arms=json.loads(s.get('arms') or '[]');names=sorted({a.get('streetName','') for a in arms if a.get('streetName')})
- sites.append({'id':s['tsc'],'point':p,'streets':names,'flow':round(sum(rates),1) if rates else None,'recorded':max(stamps) if stamps else None,'approaches':len(rates)})
-# Historical ground contours: no inference of bridge deck or tunnel elevation.
-terrain=json.loads((inputs/'bcc-terrain.json').read_text()); samples=[];heights=[];clip=box(152.998,-27.487,153.033,-27.465)
-for f in terrain['features']:
- h=float(f['attributes']['ELEVATION'])
- for coords in f['geometry']['paths']:
-  clipped=LineString(coords).intersection(clip)
-  lines=list(clipped.geoms) if hasattr(clipped,'geoms') else [clipped]
-  for line in lines:
-   if line.geom_type!='LineString' or line.length==0:continue
-   count=max(2,math.ceil(line.length*111000/8))
-   for i in range(count):
-    p=line.interpolate(i/(count-1),normalized=True);samples.append([p.x*99000,p.y*111000]);heights.append(h)
-tree=cKDTree(samples);elev=[]
-for lat,lon in nodes2:
- ds,ns=tree.query([lon*99000,lat*111000],k=12)
- if ds[0]>50:elev.append(None);continue
- weights=[1/max(float(d),1)**2 for d in ds];elev.append(round(sum(heights[n]*w for n,w in zip(ns,weights))/sum(weights),2))
-# Associate network edges with survey sites; these are proximity indicators, not verified crossings.
-for e in edges2:
- a,b,_,ri=e;p=[(nodes2[a][0]+nodes2[b][0])/2,(nodes2[a][1]+nodes2[b][1])/2]
- nearby=[(dist(p,s['point']),i) for i,s in enumerate(sites)];nearest=min(nearby) if nearby else (math.inf,None)
- e.append(nearest[1] if nearest[0]<=60 else None)
-retrieved=json.loads((inputs/'snapshot-meta.json').read_text())['retrieved'] if (inputs/'snapshot-meta.json').exists() else '2026-09-15'
-meta={'retrieved':retrieved,'network':'BCC Bikeway sections + LGIP Existing Bikeway','trafficFrom':min(v['recorded'] for v in volumes),'trafficTo':max(v['recorded'] for v in volumes),'terrainYear':2002,'vertexPrecision':7,'inputSegments':len(rows)+len(extra),'graphNodes':len(nodes2),'graphEdges':len(edges2),'speedKmh':15,'scope':'Milton to nearby BCC cycleway arrivals; no connector to landmark','direction':'Dataset has no legal direction/turn restrictions; undirected planning graph, not navigation'}
-data={'meta':meta,'nodes':nodes2,'elevations':elev,'edges':edges2,'records':records2,'start':start,'destinations':destinations,'sites':sites}
-(root/'dist/data/bcc-data.js').write_text('/* BCC data only. Attribution and methodology: DATA_SOURCES.md */\nwindow.BCC_DATA='+json.dumps(data,separators=(',',':'))+';\n')
+ for (tsc,lane),v in latest.items():
+  if tsc!=s['tsc']:continue
+  try:
+   ct=float(v['ct']);values=[float(v[f'mf{k}']) for k in range(1,5) if v.get(f'mf{k}') is not None]
+   if ct>0 and values and min(values)>=0:rates.append(sum(values)/ct*3600);stamps.append(v['recorded'])
+  except (ValueError,TypeError):continue
+ arms=json.loads(s.get('arms') or '[]')
+ sites.append({'id':s['tsc'],'point':p,'streets':sorted({a['streetName'] for a in arms if a.get('streetName')}),'flow':round(sum(rates),1) if rates else None,'recorded':max(stamps) if stamps else None,'approaches':len(rates)})
+for e in edges:
+ a,b=nodes[e[0]],nodes[e[1]];p=[(a[0]+b[0])/2,(a[1]+b[1])/2]
+ nearby=min(((distance(p,s['point']),i) for i,s in enumerate(sites)),default=(math.inf,None))
+ e[4]=nearby[1] if nearby[0]<=60 else None
+# Use only BCC contour heights. The third coordinate from BRouter is deliberately discarded.
+cache_path=inputs/'contour-node-cache.json'
+previous=json.loads(cache_path.read_text()) if cache_path.exists() else {}
+if previous.get('nodes')==nodes:
+ elev=previous['elevations'];print('Reusing unchanged contour estimates',flush=True)
+else:
+ terrain=read('bcc-terrain.json');samples=[];heights=[];clip=box(152.965,-27.525,153.04,-27.455)
+ for f in terrain['features']:
+  h=float(f['attributes']['ELEVATION'])
+  for coords in f['geometry']['paths']:
+   clipped=LineString(coords).intersection(clip)
+   lines=list(clipped.geoms) if hasattr(clipped,'geoms') else [clipped]
+   for line in lines:
+    if line.geom_type!='LineString' or not line.length:continue
+    count=max(2,math.ceil(line.length*111000/8))
+    coords=get_coordinates(line_interpolate_point(line,np.linspace(0,1,count),normalized=True))
+    coords[:,0]*=99000;coords[:,1]*=111000
+    samples.extend(coords.tolist());heights.extend([h]*count)
+ print('Terrain samples',len(samples),flush=True)
+ heighttree=cKDTree(samples);elev=[]
+ for lat,lon in nodes:
+  ds,ns=heighttree.query(xy([lon,lat]),k=12)
+  if ds[0]>50:elev.append(None);continue
+  weights=[1/max(float(d),1)**2 for d in ds];elev.append(round(sum(heights[n]*w for n,w in zip(ns,weights))/sum(weights),2))
+retrieved=read('snapshot-meta.json')['retrieved']
+meta={'retrieved':retrieved,'network':'OpenStreetMap cycling geometry via BRouter; BCC spatial indicators','trafficFrom':min(v['recorded'] for v in volumes),'trafficTo':max(v['recorded'] for v in volumes),'terrainYear':2002,'graphNodes':len(nodes),'graphEdges':len(edges),'speedKmh':15,'startName':'Indooroopilly Shopping Centre','startReference':start_ref,'startOffset':round(distance(nodes[start],start_ref)),'scope':'Indooroopilly to City Hall, UQ St Lucia and South Bank','direction':'Saved directed cycling routes, not live navigation','bccMatchToleranceM':12}
+data={'meta':meta,'nodes':nodes,'elevations':elev,'edges':edges,'records':records,'start':start,'destinations':destinations,'sites':sites,'preparedRoutes':prepared,'bccNetwork':bccNetwork}
 (root/'dist/data/bcc-data.json').write_text(json.dumps(data,separators=(',',':')))
-print(json.dumps({'meta':meta,'start':nodes2[start],'destinations':destinations,'sites':len(sites),'elevationCoverage':sum(x is not None for x in elev)/len(elev)},indent=2))
+(root/'dist/data/bcc-data.js').write_text('/* OSM route geometry + BCC indicators. See DATA_SOURCES.md. */\nwindow.BCC_DATA='+json.dumps(data,separators=(',',':'))+';\n')
+print(json.dumps(meta,indent=2));print('Elevation coverage',sum(h is not None for h in elev)/len(elev))

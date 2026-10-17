@@ -1,4 +1,4 @@
-/* Person 2 — BCC-only route graph and geometry helpers. No external routing service. */
+/* Saved OSM/BRouter cycling candidates enriched with BCC indicators. No runtime routing API. */
 (function (root) {
   "use strict";
   const data = root.BCC_DATA;
@@ -148,6 +148,7 @@
       length = cumulative.at(-1);
     let off = 0,
       known = 0,
+      bikeway = 0,
       named = 0,
       road = 0;
     const records = new Set();
@@ -155,6 +156,7 @@
       const e = data.edges[ei],
         r = data.records[e[3]];
       records.add(e[3]);
+      if (r.dataset === "assets" && r.type) bikeway += e[2];
       if (r.position) {
         known += e[2];
         if (r.position === "OFF ROAD") off += e[2];
@@ -172,13 +174,14 @@
       minutes: Math.ceil((length / 15000) * 60),
       walk: 0,
       ascent: null,
-      signature: path.edgeIds.join(","),
-      offroad: off / length,
-      known: known / length,
+      signature: path.nodeIds.join(","),
+      bikeway: Math.min(1, bikeway / length),
+      offroad: Math.min(1, off / length),
+      known: Math.min(1, known / length),
       road: road / length,
       riverShare: named / length,
       recordIds: [...records],
-      source: "Brisbane City Council",
+      source: "OpenStreetMap via BRouter; BCC indicators",
     };
   }
   const cache = {};
@@ -186,47 +189,32 @@
     if (cache[destination]) return cache[destination].map((r) => ({ ...r }));
     const d = destinations.find((d) => d.id === destination);
     if (!d)
-      throw new Error("Choose one of the supported BCC cycleway arrivals.");
-    const first = shortest(d.node);
-    if (!first)
-      throw new Error(
-        "BCC data does not contain a connected route to this arrival. No missing road has been invented.",
-      );
-    const quick = materialise(first),
-      pool = [quick],
-      signatures = new Set([quick.signature]),
-      penalty = new Float64Array(data.edges.length);
-    let path = first;
-    for (let i = 0; i < 8; i++) {
-      for (const e of path.edgeIds) penalty[e] += 1.5;
-      path = shortest(d.node, penalty);
-      if (!path) break;
-      const r = materialise(path);
-      if (r.length <= quick.length * 2.2 && !signatures.has(r.signature)) {
-        pool.push(r);
-        signatures.add(r.signature);
-      }
-    }
-    const safety = [...pool].sort(
+      throw new Error("Choose one of the supported demo destinations.");
+    const candidates = (data.preparedRoutes[destination] || []).map(materialise);
+    if (!candidates.length) throw new Error("No saved route is available for this destination.");
+    const quick = [...candidates].sort((a,b) => a.length-b.length)[0];
+    const pool = [...new Map(candidates.filter(r => r.length <= quick.length*2.2).map(r => [r.signature,r])).values()];
+    const safety = pool.filter(r => r.signature !== quick.signature).sort(
       (a, b) =>
         a.length * (1 + 2 * a.road + 0.75 * (1 - a.known)) -
         b.length * (1 + 2 * b.road + 0.75 * (1 - b.known)),
     )[0];
-    const scenic = [...pool].sort(
+    const scenic = pool.filter(r => r.signature !== quick.signature && r.signature !== safety?.signature).sort(
       (a, b) =>
         b.riverShare -
         (0.12 * b.length) / quick.length -
         (a.riverShare - (0.12 * a.length) / quick.length),
     )[0];
+    if (!safety || !scenic) throw new Error("Three distinct saved paths are required for this demo destination.");
     const specs = [
       {
         id: "safe",
         name: "Safety-focused",
         symbol: "◇",
         color: "#0875ed",
-        description: "Prefers BCC-mapped off-road sections.",
+        description: "Alternative selected using BCC bikeway attributes.",
         reason:
-          "Balances distance against on-road and unclassified sections. This is a routing preference, not a proven safety rating.",
+          "Quick reserves the shortest path. Of the remaining distinct paths, this option balances distance against BCC-matched on-road and unclassified sections. It is not a verified safety rating and may involve a detour.",
         route: safety,
       },
       {
@@ -234,9 +222,9 @@
         name: "Quick",
         symbol: "ϟ",
         color: "#7952d4",
-        description: "Shortest connected path in this BCC graph.",
+        description: "Shortest of the prepared cycling options.",
         reason:
-          "Dijkstra shortest path using distances calculated from BCC coordinates. Time assumes 15 km/h, without stops.",
+          "Shortest saved OSM/BRouter candidate, not a guaranteed global shortest route. Time assumes 15 km/h, without stops.",
         route: quick,
       },
       {
@@ -244,9 +232,9 @@
         name: "Scenic",
         symbol: "≈",
         color: "#078773",
-        description: "Prefers BCC-named riverside bikeways.",
+        description: "A third distinct path for scenery comparison.",
         reason:
-          "Prefers sections named Bicentennial Bikeway, Riverwalk or Kangaroo Point Bikeway in BCC records, with a detour penalty.",
+          "Selected from paths not used by Quick or Safety-focused, favouring BCC-named riverside sections where available. Distinct paths take priority in this demo; this is not a verified scenery rating.",
         route: scenic,
       },
     ];
@@ -255,7 +243,7 @@
       return {
         ...route,
         ...spec,
-        via: "Milton cycleway → " + d.name + " nearby cycleway",
+        via: "Indooroopilly → " + d.name + " mapped arrival",
         uniqueCandidates: pool.length,
       };
     });

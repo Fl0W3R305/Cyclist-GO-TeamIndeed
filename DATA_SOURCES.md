@@ -1,81 +1,72 @@
-# Data Sources, Calculation Methods and Limitations
+# Data Sources, Methods and Limitations
 
-All route calculation inputs are sourced from Brisbane City Council (BCC). The original BRouter routes and elevation data have been removed. OpenStreetMap is used only as the basemap and its roads and elevation data are not used in calculations.
+## Current version: Indooroopilly routes
 
-## BCC Datasets
+This version supersedes the previous Milton-only BCC graph. The BCC asset data does not supply a fully connected network from Indooroopilly Shopping Centre to UQ and the CBD. Following approval to supplement the network, **OpenStreetMap (OSM) supplies route geometry, precomputed by BRouter**. BCC supplies spatial bikeway attributes, traffic measurements and historical contours. OSM also supplies the basemap. No route computation service is called when the demo opens.
 
-| Purpose | Source | Fields/Content Used |
+## Sources
+
+| Purpose | Source | Use |
 |---|---|---|
-| Road network geometry and bikeway attributes | [Bikeway sections](https://data.brisbane.qld.gov.au/explore/dataset/bikeway-sections/) | `geo_shape`, `objectid`, `traffic_types_description`, `bikeway_on_off_road_desc`, `locations_description`, `bikeway_name` |
-| Supplementary existing network geometry | [LGIP Existing Bikeway](https://data.brisbane.qld.gov.au/explore/dataset/cp14-lgip-pfti-active-and-public-transport-existing-bikeway/) | `geo_shape`, `objectid`; only Existing infrastructure is used, while Future planned infrastructure is excluded |
-| Signalised intersection locations | [Intersection locations — reference](https://data.brisbane.qld.gov.au/explore/dataset/traffic-management-intersection-locations-reference/) | `tsc`, `latitude`, `longitude`, `arms` |
-| Signalised intersection traffic volume | [Intersection volume](https://data.brisbane.qld.gov.au/explore/dataset/traffic-data-at-intersection/) | `tsc`, `lane`, `recorded`, `ct`, `mf1`–`mf4` |
-| Historical terrain | [Contours — 2002 — Download files](https://data.brisbane.qld.gov.au/explore/dataset/contours-2002-download-files/) | BCC-linked ArcGIS Contours_2002_Feature_Service: `ELEVATION` and contour geometry |
+| Cycling route geometry | [OpenStreetMap](https://www.openstreetmap.org/copyright), prepared by [BRouter](https://brouter.de/) | Saved trekking-profile candidates; no fabricated straight-line connectors |
+| Bikeway attributes | [BCC Bikeway sections](https://data.brisbane.qld.gov.au/explore/dataset/bikeway-sections/) | Geometry, objectid, type, on/off-road classification, structure level and bikeway/street names |
+| Additional BCC overlay geometry | [LGIP Existing Bikeway](https://data.brisbane.qld.gov.au/explore/dataset/cp14-lgip-pfti-active-and-public-transport-existing-bikeway/) | Map overlay only; geometry-only records do not establish bikeway classification for route percentages |
+| Monitored signals | [Intersection locations](https://data.brisbane.qld.gov.au/explore/dataset/traffic-management-intersection-locations-reference/) | TSC, coordinates and street names |
+| Traffic snapshot | [Intersection volume](https://data.brisbane.qld.gov.au/explore/dataset/traffic-data-at-intersection/) | TSC, lane/approach, recorded time, cycle time ct, mf1–mf4 |
+| Historical ground terrain | [Contours 2002](https://data.brisbane.qld.gov.au/explore/dataset/contours-2002-download-files/) | BCC-linked ArcGIS Contours_2002_Feature_Service, ELEVATION and contour geometry |
 
-© Brisbane City Council. The datasets are used under the CC BY 4.0 licences stated on their respective source pages. This project clips, constructs graphs from, matches, samples and calculates indicators from the original data. This does not imply endorsement of this product by BCC.
+BCC sources: © Brisbane City Council, CC BY 4.0 as stated on the source pages. OSM data: © OpenStreetMap contributors, ODbL. Leaflet 1.9.4 is the map-rendering library, BSD-2-Clause; its license is included in `dist/vendor/LICENSE`. BRouter's saved route responses and request URLs are included under `scripts/route-snapshots/`. This is an adapted demonstrator, not an endorsement by the data providers.
 
-## Download and Coverage
+## Scope and preparation
 
-- Download date: 2026-09-15.
-- Bikeways: queried within a 6 km radius of POINT(153.012 -27.486).
-- Original coverage: 2,051 Bikeway sections and 348 Existing Bikeway sections.
-- Published graph: the connected component containing the Milton starting point, consisting of 2,881 nodes and 2,900 edges.
-- Terrain coverage: 152.998,-27.487 to 153.033,-27.465. A total of 1,246 matching contour lines were downloaded. The source data is from **2002**, not 2026.
-- Original traffic snapshot: 2026-09-15 11:30–11:34 UTC, equivalent to 21:30–21:34 in Brisbane. The UI clearly states that this is not live traffic data.
+- Fixed start: the mapped public path beside Indooroopilly Shopping Centre, requested coordinate 152.9735, -27.4995. The snapped-start offset is stored in data metadata and disclosed in the page.
+- Destinations: Brisbane City Hall, UQ St Lucia and South Bank. Endpoints are mapped arrivals near the requested landmarks. Their distances from the reference points are shown; no building-access connector is invented.
+- BCC network query: 9 km around POINT(152.998 -27.49).
+- Ground contour envelope: 152.965,-27.525 to 153.04,-27.455. The source year remains **2002**, regardless of download date.
+- The actual retrieval date, traffic observation interval and graph sizes are stored in `dist/data/bcc-data.json` under `meta`.
+- Route preparation uses BRouter's cycling `trekking` profile, with ferries and steps disabled and its elevation preference disabled. The downloaded geometry is retained; BRouter elevations, time and ascent are not used for the displayed metrics.
+- BRouter's OSM route access information is a snapshot and may be incomplete or out of date. It is not a certification of current legal access or conditions.
 
-## Road Network Construction
+## Candidate selection
 
-1. All edges between adjacent vertices in BCC polylines are retained. Coordinates are preserved to seven decimal places, providing centimetre-level processing precision.
-2. Only shared vertices are connected. Nearby roads are not connected directly, grade-separated and ground-level roads that visually intersect are not automatically connected, and gaps of several metres are not filled.
-3. Duplicate edges prioritise attributes from the asset dataset, followed by geometry from the Existing Bikeway dataset. Missing attributes remain unknown.
-4. A real BCC graph node near the Milton reference point is selected as the starting point. Destinations are also real graph nodes. The UI explains that these nodes are approximately 100 m from QUT, 87 m from QAGOMA and 30 m from North Quay. These gaps are not drawn as assumed traversable connections.
-5. The graph is undirected. The source data does not provide complete legal travel directions, turning restrictions, crossing controls or current closure information. Shared planar coordinates also do not constitute on-site verification of accessibility. Therefore, the graph must not be used as a real navigation service.
+Three BRouter alternatives are requested for each destination. The browser keeps distinct saved candidates within 2.2 times the shortest candidate length. It never constructs a new connection between candidate paths.
 
-## Routing
+- **Quick:** shortest saved candidate; not a guaranteed globally shortest route.
+- **Safety-focused:** after reserving Quick, selects a different path minimising length × (1 + 2 × matched on-road share + 0.75 × unclassified share). These are product weights, not an official safety rating.
+- **Scenic:** from candidates not assigned to Quick or Safety-focused, favours the share matched to BCC names containing Bicentennial, Riverwalk or Kangaroo Point, with a detour penalty. It is not an official scenery score.
+- The demo requires three distinct coordinate sequences. Distinct paths take priority over independently optimal labels: the Safety-focused alternative is not guaranteed safer than Quick, and Scenic is not a verified scenery rating. All candidates remain real saved cycling routes; no connectors are invented.
+- Distance is haversine length of the saved OSM coordinate sequence. Time assumes 15 km/h, excluding stops, signals and current traffic.
 
-`routes.js` implements Dijkstra’s algorithm using a min-heap. Quick mode uses the geometrically shortest path. It then generates up to eight alternative candidates by applying additional costs to previously used edges and retains loop-free paths no longer than 2.2 times the shortest path.
+Every displayed route is materialised from its own node and edge IDs. Distance, time, BCC bikeway/off-road shares, traffic, contour-based hill metrics and filters are recomputed from that route. Candidate labels do not supply any fixed or simulated metric values.
 
-- Safety-focused: minimises `length × (1 + 2×on-road proportion + 0.75×unknown-type proportion)`. These are disclosed product weights, not an official BCC safety rating.
-- Scenic: prioritises segments whose BCC names contain Bicentennial, Riverwalk or Kangaroo Point while penalising detours. This is a journey preference, not a scenic quality rating.
-- The three modes independently select the most appropriate candidate and may select the same path. Different routes are not fabricated merely to display three lines.
-- Distance: calculated using the haversine length of the BCC coordinate sequence.
-- Time: calculated as distance ÷ 15 km/h. The speed of 15 km/h is a demonstration assumption rather than a BCC-published observed speed. It does not account for waiting, walking the bicycle or real-time traffic.
+## Bikeway and off-road percentages
 
-## Four Checkboxes
+BCC attributes are matched conservatively to OSM route segments. Three sample points along a segment must lie within 12 m of the same BCC asset geometry. The local directions must align within 25 degrees; ground/structure classifications must be compatible. A BCC off-road asset cannot be assigned to an OSM ordinary-road segment. This reduces false matches but cannot prove identity, particularly around parallel paths and junctions.
 
-### Protected bikeways
+Identified bikeway share is matched, typed BCC asset length divided by total route length. Off-road share is the separate subset matched to BCC OFF ROAD assets. Physical separation by a kerb or barrier is not verified. Unmatched or untyped length is **Unknown**, not a confirmed absence of cycling facilities. LGIP geometry alone is not counted as typed coverage. Percentages and colours represent spatial estimates.
 
-A route must have **at least 95% of its length marked as OFF ROAD by BCC**, with at least 95% type-data coverage, to satisfy this verifiable off-road proxy indicator. This does not confirm the presence of physical separation such as kerbs or barriers. The UI explains this limitation. The threshold is a disclosed rule used by this MVP and is not an official BCC standard.
+More bikeways keeps options with a positive bikeway share at or above the median of the three modes. This compares coverage rather than demanding a continuous protected route.
 
-### Less traffic
+## Less traffic
 
-For each TSC and approach, the most recent record in the snapshot is retained. `sum(mf1..mf4) / ct × 3600` converts the measurement into an equivalent vehicles-per-hour value for that approach. The values for all approaches at an intersection are then summed. The original data consists of observations per signal cycle and is **not a complete one-hour traffic count**. The most recent records for different approaches may come from different minutes within the snapshot.
+For each TSC + lane/approach, retain the latest snapshot record. Convert sum(mf1..mf4) / ct × 3600 into an hourly-equivalent vehicle count, then sum measured approaches per signal. This is a signal-cycle rate extrapolation, **not a full measured hour**. Latest approaches may have different timestamps.
 
-Only route edges classified as ON GROUND or ON PAVEMENT are associated with the nearest BCC intersection when their midpoint is within 60 m of that intersection. The mean traffic volume of these nearby intersections is then calculated. ON STRUCTURE, UNDER STRUCTURE and IN TUNNEL edges are excluded from proximity matching. This 60 m spatial association does not confirm that the route actually passes through the intersection. It is only an indicator of nearby monitored traffic and does not cover every road along the route.
+Only ground-level route edges are linked to the nearest monitored signal within 60 m of their midpoint. Use the mean across distinct linked signals. Proximity does not establish that the cyclist crosses the signal, and many road sections are unmonitored. Display covered route length and do not treat missing data as low traffic. The filter keeps values at or below the mode median. Less busy crossings was removed because it duplicated this limited signal-flow proxy.
 
-The checkbox retains routes whose indicator is no higher than the median of the three modes. Identical data may result in all tied routes being retained. The UI displays the proportion of route segments covered by the data and does not treat unmonitored segments as having low traffic.
+## Hills and training
 
-### Fewer hills
+Contour lines are sampled approximately every 8 m. A route node's elevation is estimated from the 12 nearest contour samples with inverse-square distance weights; the estimate is unknown when the nearest sample is more than 50 m away. Bridge/tunnel sections identified in OSM structure extracts or matched BCC structure records are excluded. OSM structure extracts cover the city river crossings, Eleanor Schonell Bridge and the Indooroopilly bridge precinct; BCC matching supplements them. Unmapped structures remain a source of uncertainty. Heights come from BCC contours, not BRouter's elevation values.
 
-The BCC 2002 contour lines are sampled approximately every 8 m. Each graph node uses the 12 nearest samples with inverse-distance-squared weighting. Elevation is considered unknown when the nearest sample is more than 50 m away. Only known ON GROUND or ON PAVEMENT edges are used. Elevation is not inferred for bridges, tunnels or segments with unknown attributes.
+Known continuous ground runs are resampled at 40 m intervals (a final interval must be at least 20 m). Missing data splits a run; no ascent is inferred across a gap. A 2 m reversal threshold reduces small interpolation fluctuations in accumulated ascent/descent. Major climbs require at least 3 m rise, 60 m length and 2% sampled uphill gradient.
 
-The indicator is the **maximum estimated elevation minus the minimum estimated elevation** among covered ground-level nodes. It is not total elevation gain or the number of hills. At least 80% of classified ground-level segments must have terrain data before routes no higher than the median of the three modes are retained. The UI also displays the proportion of the entire route covered by the terrain data. The 2002 terrain data, interpolation method and uncovered bridge surfaces all affect applicability, so small differences should not be used to determine actual cycling difficulty.
+Intensity (0–100) = 50 × min(ascent / 100 m, 1) + 30 × min(maximum absolute sampled gradient / 10%, 1) + 20 × min(major climbs / 5, 1).
 
-### Less busy crossings
+These transparent weights are demonstration assumptions, not BCC standards or a fitness assessment. Values describe covered ground only, not exact whole-route ascent. Both ground-only coverage and total-route coverage are displayed. At least 80% of eligible ground length must have elevation estimates for hill filtering. Fewer hills keeps scores at/below the eligible median; Hill training keeps scores at/above it. They are mutually exclusive, although tied routes may satisfy either choice separately. Historical terrain, interpolation and incomplete structure tags can distort estimates.
 
-Only route segments whose BCC type contains CROSSING are matched with the nearby intersection traffic data described above. Every identified crossing must have usable traffic data before its maximum value can be calculated and compared with the median of the three modes.
+## Hazard and ride behaviour
 
-**The selected routes to all three destinations currently lack complete crossing-flow data that satisfies this rule.** Therefore, this condition matches no routes and displays an Unknown or no-match state. The absence of a CROSSING label also does not prove that a route has no crossings. Unknown values must not be treated as zero or automatically accepted.
+Initial hazards are explicitly labelled fictional samples. Browser-local reports, drafts, confirmations, ignored hazards and observations do not affect route ranking and are not verified live data. The simulator follows the saved geometry and does not use GPS. Save a location or complete a report only while paused/stopped; finish the report after reaching a safe place. The report marker can be repositioned on the map. Reports within 35 m of a selected route appear in that route's list; adjusted reports remain stored even when outside that threshold.
 
-## Content Not Used in Route Calculations
+## Updating and validation
 
-- The initial hazards are clearly labelled fictional demonstration scenarios used to demonstrate different hazard states and the reporting process.
-- Local user reports and feedback do not change BCC route scores.
-- Simulated cycling positions move along the calculated BCC routes. GPS data is not collected, and community reports are not transmitted.
-- Leaflet 1.9.4, licensed under BSD-2-Clause, and the © OpenStreetMap basemap are used only for presentation.
-
-## Update Method
-
-Developers can run `python3 scripts/fetch_data.py INPUT_DIR` to download the original inputs and then run `python3 scripts/build_data.py INPUT_DIR` to rebuild `dist/data/bcc-data.js` and the JSON file. For a standard demonstration, users only need to open `dist/index.html`; Python dependencies are not required.
-
-When updating the data, developers must verify fields, record counts, geographic coverage, lawful access and licensing, traffic timestamps and network connectivity. Changes in data coverage may alter the available routes and filtering results. Thresholds must not be silently relaxed, and disconnected roads must not be joined simply to produce demonstration results.
+Run `fetch_data.py`, `fetch_routes.py`, then `build_data.py` with the same input directory. A coordinate-keyed contour-node cache is included with the route snapshots to reproduce this version without downloading the large contour extract again. Remove the cache when refreshing terrain inputs; it is reused only when the entire node coordinate sequence matches. Validate API schemas, source access, licensing, timestamps, matched coverage, landmark offsets and route continuity. Check river crossings against actual mapped bridges. Do not join gaps or increase matching tolerances merely to produce more matches. Missing measurements must remain unknown.

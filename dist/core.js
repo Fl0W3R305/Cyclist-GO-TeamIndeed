@@ -4,6 +4,7 @@ const D = RideData;
 const STORE = "cyclist-go-bcc-reports-v1",
   VOTES = "cyclist-go-bcc-feedback-v1";
 let storageOK = true;
+/* Person 1 — core module. See TEAM_ALLOCATION.md. */
 function readSaved(key, fallback) {
   try {
     return JSON.parse(localStorage.getItem(key)) ?? fallback;
@@ -67,15 +68,17 @@ function showView(view) {
     .querySelectorAll(".destination-label")
     .forEach(
       (el) =>
-        (el.textContent = dest() ? `Milton cycleway → ${dest().name}` : ""),
+        (el.textContent = dest() ? `Indooroopilly → ${dest().name}` : ""),
     );
   document
     .querySelector(".map-section")
     .classList.toggle("riding-map", view === "ride");
   $("map-label").textContent =
     view === "ride" ? "SIMULATED RIDE" : "BRISBANE, QLD";
+  document.body.classList.toggle("riding-mode", view === "ride");
   document.querySelector(".planner").scrollTop = 0;
-  setTimeout(() => state.map?.invalidateSize(), 0);
+  $("fit").textContent = view === "ride" ? "⌖ Following rider" : "⌖ Fit route";
+  setTimeout(() => { state.map?.invalidateSize(); if (current()) { if (state.view === "ride") followRider(); else fit(); } }, 0);
 }
 const stored = readSaved(STORE, []),
   votes = readSaved(VOTES, {});
@@ -96,6 +99,8 @@ const state = {
   rider: null,
   reportType: null,
   reportFraction: 0,
+  draftId: null,
+  reportPoint: null,
   undo: null,
   rideReportCount: 0,
   bikeways: null,

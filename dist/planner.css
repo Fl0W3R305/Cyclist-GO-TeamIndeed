@@ -216,3 +216,6 @@
     margin-bottom: 0;
   }
 }
+
+.suggestion.chosen {background:#e8f2ff;border-color:#0875ed;box-shadow:inset 3px 0 #0875ed;}
+.suggestion.chosen strong,.suggestion.chosen .arrow {color:#0868cf;}

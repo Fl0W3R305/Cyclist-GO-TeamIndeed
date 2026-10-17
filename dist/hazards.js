@@ -85,13 +85,13 @@ function routeHazards(route = current()) {
   if (!route) return [];
   const samples = state.samples.filter((h) => h.routeId === route.id);
   const reports = state.reports
-    .map((h) => ({ ...h, ...D.nearest(route, h.point) }))
+    .map((h) => ({ ...h, ...D.nearest(route, h.point), point: h.point }))
     .filter((h) => h.distance <= 35);
   return [...samples, ...reports].sort((a, b) => a.fraction - b.fraction);
 }
 function visibleHazards() {
   return routeHazards().filter(
-    (h) => state.filter === "all" || h.kind === state.filter,
+    (h) => state.votes[h.id] !== "ignored" && (state.filter === "all" || h.kind === state.filter),
   );
 }
 function hazardType(h) {
@@ -124,7 +124,7 @@ function openHazard(id) {
   const t = hazardType(h);
   $("hazard-title").textContent = t.name;
   $("hazard-dialog-content").innerHTML =
-    `<div class="hazard-detail-body"><p class="status-label ${h.kind}">${h.kind === "potential" ? "◌ Potential risk" : "● Reported hazard"} · ${h.sample ? "Sample scenario" : "Your local report"}</p><p>${escapeHTML(h.note || "No extra details added.")}</p><p><b>${escapeHTML(h.severity)}</b><br>${(h.fraction * current().km).toFixed(1)} km from the start · ${h.sample ? "Illustrative location" : new Date(h.created).toLocaleString()}</p><p class="muted">${h.kind === "potential" ? "A possible risk, not a confirmed incident." : "An observation, not an independently verified incident."}</p><div class="feedback-actions"><button data-vote="here" data-id="${h.id}" aria-pressed="${state.votes[h.id] === "here"}">${h.kind === "potential" ? "Useful warning" : "Still here"}</button><button data-vote="gone" data-id="${h.id}" aria-pressed="${state.votes[h.id] === "gone"}">${h.kind === "potential" ? "Not relevant" : "No longer here"}</button></div><p class="muted">Feedback stays on this browser.${h.sample ? " This is demonstration data." : ""}</p>${!h.sample ? `<button class="text-button" data-delete="${h.id}">Delete my report</button>` : ""}</div>`;
+    `<div class="hazard-detail-body"><p class="status-label ${h.kind}">${h.kind === "potential" ? "◌ Potential risk" : "● Reported hazard"} · ${h.sample ? "Sample scenario" : "Your local report"}</p><p>${escapeHTML(h.note || "No extra details added.")}</p><p><b>${escapeHTML(h.severity)}</b><br>${(h.fraction * current().km).toFixed(1)} km from the start · ${h.sample ? "Illustrative location" : new Date(h.created).toLocaleString()}</p><p class="muted">${h.kind === "potential" ? "A possible risk, not a confirmed incident." : "An observation, not an independently verified incident."}</p><div class="feedback-actions"><button data-vote="ignored" data-id="${h.id}">Ignore for me</button><button data-vote="here" data-id="${h.id}" aria-pressed="${state.votes[h.id] === "here"}">${h.kind === "potential" ? "Useful warning" : "Still here"}</button><button data-vote="gone" data-id="${h.id}" aria-pressed="${state.votes[h.id] === "gone"}">${h.kind === "potential" ? "Not relevant" : "No longer here"}</button></div><p class="muted">Feedback stays on this browser.${h.sample ? " This is demonstration data." : ""}</p><label>Additional observation<textarea id="hazard-extra-note" maxlength="180" placeholder="Add information after stopping safely"></textarea></label><button class="secondary" data-observation="${h.id}">Save observation</button><p>${escapeHTML(state.votes[h.id + "-note"] || "")}</p>${!h.sample ? `<button class="text-button" data-delete="${h.id}">Delete my report</button>` : ""}</div>`;
   if (!$("hazard-dialog").open) $("hazard-dialog").showModal();
   state.map?.panTo(h.point);
 }
@@ -139,22 +139,27 @@ function renderTypes() {
   $("quick-types").innerHTML = html(false);
   $("report-types").innerHTML = html(true);
 }
-function openReport(type = null) {
-  if (state.view !== "ride") return;
+function openReport(type = null, draftId = null) {
+  if (!["ride", "summary"].includes(state.view)) return;
+  state.draftId = draftId;
+  const draft = state.drafts.find(d => d.id === draftId);
   pause();
   state.reportType = type;
-  state.reportFraction = state.progress;
-  $("report-position").value = Math.round(state.progress * 1000);
+  state.reportFraction = draft ? draft.fraction : state.progress;
+  state.reportPoint = D.pointAt(current(), state.reportFraction);
+  $("report-position").value = Math.round(state.reportFraction * 1000);
   $("report-kind").value = "reported";
   $("report-severity").value = "Caution";
   $("report-note").value = "";
-  document.querySelector(".report-details").open = false;
+  document.querySelector(".report-details").open = true;
   updateReport();
   $("report-dialog").showModal();
+  setupReportMap();
 }
 function updateReport() {
   renderTypes();
-  const p = D.pointAt(current(), state.reportFraction);
+  const p = state.reportPoint || D.pointAt(current(), state.reportFraction);
+  state.reportMarker?.setLatLng(p);
   $("report-location").textContent =
     `${(state.reportFraction * current().km).toFixed(1)} km along route · ${p[0].toFixed(5)}, ${p[1].toFixed(5)}`;
   document.querySelector(".location-row strong").textContent =
@@ -167,25 +172,28 @@ function updateReport() {
     : "Select a hazard above";
 }
 function submitReport() {
-  if (!state.reportType || state.view !== "ride") return;
+  if (!state.reportType || !["ride", "summary"].includes(state.view)) return;
   const h = {
     id: "local-" + Date.now() + "-" + Math.random().toString(36).slice(2, 7),
     type: state.reportType,
     kind: $("report-kind").value,
     severity: $("report-severity").value,
     note: $("report-note").value.trim().slice(0, 180),
-    point: D.pointAt(current(), state.reportFraction),
+    point: state.reportPoint || D.pointAt(current(), state.reportFraction),
     created: Date.now(),
     destination: state.destination,
     routeId: state.selected,
     sample: false,
   };
   state.reports.push(h);
+  state.drafts = state.drafts.filter(d => d.id !== state.draftId);
+  saveDrafts();
   state.rideReportCount++;
   const saved = save();
   $("report-dialog").close();
   drawHazards();
-  updateRide();
+  if (state.view === "ride") updateRide();
+  else renderSummary();
   toast(
     saved
       ? "Hazard added at the selected route position."
@@ -203,6 +211,12 @@ function setupHazards() {
   document.addEventListener("click", (e) => {
     const b = e.target.closest("[data-hazard]");
     if (b) openHazard(b.dataset.hazard);
+    const draft = e.target.closest("[data-complete-draft]");
+    if (draft) openReport(null, draft.dataset.completeDraft);
+    const discard = e.target.closest("[data-discard-draft]");
+    if (discard) { state.drafts = state.drafts.filter(d => d.id !== discard.dataset.discardDraft); saveDrafts(); renderSummary(); }
+    const observation = e.target.closest("[data-observation]");
+    if (observation) { state.votes[observation.dataset.observation + "-note"] = $("hazard-extra-note").value.trim(); save(); openHazard(observation.dataset.observation); }
     const quick = e.target.closest("[data-quick-type]");
     if (quick) openReport(quick.dataset.quickType);
     const report = e.target.closest("[data-report-type]");
@@ -214,7 +228,8 @@ function setupHazards() {
     if (vote) {
       state.votes[vote.dataset.id] = vote.dataset.vote;
       const saved = save();
-      openHazard(vote.dataset.id);
+      if (vote.dataset.vote === "ignored") $("hazard-dialog").close();
+      else openHazard(vote.dataset.id);
       renderHazards();
       if (state.view === "ride") updateRide();
       toast(
@@ -234,9 +249,15 @@ function setupHazards() {
       toast("Your report was deleted.");
     }
   });
-  $("report-button").addEventListener("click", () => openReport());
+  $("report-button").addEventListener("click", recordHazardLocation);
+  $("summary-report").addEventListener("click", () => openReport());
+  $("restore-ignored").addEventListener("click", () => {
+    Object.keys(state.votes).forEach(id => { if (state.votes[id] === "ignored") delete state.votes[id]; });
+    save(); renderHazards(); toast("Ignored hazards restored on this browser.");
+  });
   $("report-position").addEventListener("input", () => {
     state.reportFraction = Number($("report-position").value) / 1000;
+    state.reportPoint = D.pointAt(current(), state.reportFraction);
     updateReport();
   });
   $("submit-report").addEventListener("click", submitReport);
@@ -250,4 +271,28 @@ function setupHazards() {
     toast("Report removed.");
   });
   renderTypes();
+}
+
+const DRAFT_STORE="cyclist-go-bcc-drafts-v1";
+const draftSaved=readSaved(DRAFT_STORE,[]);
+state.drafts=Array.isArray(draftSaved)?draftSaved.filter(d=>d && typeof d.id==="string" && /^[a-z0-9-]+$/.test(d.id) && typeof d.signature==="string" && Number.isFinite(d.fraction) && d.fraction>=0 && d.fraction<=1):[];
+function saveDrafts(){try{localStorage.setItem(DRAFT_STORE,JSON.stringify(state.drafts));}catch{storageOK=false;}}
+function recordHazardLocation(){
+ if(state.view!=="ride" || state.timer) return;
+ state.drafts.push({id:"draft-"+Date.now()+"-"+Math.random().toString(36).slice(2,6),fraction:state.progress,destination:state.destination,signature:current().signature});
+ saveDrafts();toast("Location saved. Complete the report after ending your ride or while safely stopped.");
+}
+function setupReportMap(){
+ if(!window.L) return;
+ if(!state.reportMap){
+  state.reportMap=L.map("report-map");
+  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OpenStreetMap contributors"}).addTo(state.reportMap);
+  state.reportMarker=L.marker(state.reportPoint,{draggable:true,title:"Drag to adjust hazard location"}).addTo(state.reportMap);
+  const set=p=>{state.reportPoint=[p.lat,p.lng];state.reportFraction=D.nearest(current(),state.reportPoint).fraction;$("report-position").value=Math.round(state.reportFraction*1000);updateReport();};
+  state.reportMarker.on("dragend",()=>set(state.reportMarker.getLatLng()));
+  state.reportMap.on("click",e=>set(e.latlng));
+ }
+ state.reportRoute?.remove();state.reportRoute=L.polyline(current().points,{color:"#0875ed",weight:3}).addTo(state.reportMap);
+ state.reportMarker.setLatLng(state.reportPoint);
+ setTimeout(()=>{state.reportMap.invalidateSize();state.reportMap.setView(state.reportPoint,16);},0);
 }
