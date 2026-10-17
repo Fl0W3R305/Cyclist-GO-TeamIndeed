@@ -85,7 +85,6 @@
               aria-label="Available destinations"
             ></div>
             <p id="form-error" role="alert" class="error" hidden></p>
-            <button type="button" class="save-place-button" data-save-place disabled>Save destination</button>
             <div data-preference-panel></div>
             <button class="primary" type="submit">
               Find my routes <span>→</span>
@@ -108,7 +107,6 @@
           </button>
           <h1 class="small-title">Choose your route</h1>
           <p class="destination-label"></p>
-          <button type="button" class="save-place-button" data-save-place>Save destination</button>
           <div class="section-title">
             <h2>Three route preferences</h2>
             <span>Tap to explore</span>
@@ -189,6 +187,8 @@
           <h1>Nice riding.</h1>
           <p class="destination-label"></p>
           <div id="summary-content"></div>
+          <button id="save-route" class="secondary" type="button">☆ Save route</button>
+          <p class="muted">Save the full selected route, even if you ended the simulation early.</p>
           <button id="summary-report" class="secondary">Report a hazard after this ride</button>
           <button id="ride-again" class="primary">Plan another ride →</button>
         </section>
@@ -223,13 +223,14 @@
       </section>
     </main>
     <section id="saved-page" aria-labelledby="saved-title" hidden>
-      <div class="saved-heading"><div><p class="eyebrow">YOUR REGULAR STOPS</p><h1 id="saved-title" tabindex="-1">Saved places</h1><p class="lead">Tap a place. Choose your route. Get going.</p></div><button id="saved-add" class="secondary" type="button">+ Save a place</button></div>
+      <div class="saved-heading"><div><p class="eyebrow">YOUR RIDES</p><h1 id="saved-title" tabindex="-1">Saved routes</h1><p class="lead">Revisit your saved routes and ride them again.</p></div><button id="saved-add" class="secondary" type="button">+ Plan a ride</button></div>
       <p id="saved-scope" class="muted"></p>
       <p id="saved-error" class="error" role="alert" hidden></p>
-      <ul id="saved-list" aria-label="Saved destinations"></ul>
-      <div id="saved-empty"><span aria-hidden="true">☆</span><h2>Your regular stops, one tap away.</h2><p>Choose a destination in MVP and tap Save destination.</p><button id="saved-explore" class="primary" type="button">Choose a destination →</button></div>
+      <div id="saved-login" hidden><h2>Log in to view your saved routes</h2><p>Save routes after a ride and find them here when you return.</p><button id="saved-login-button" class="primary" type="button">Log in</button></div>
+      <ul id="saved-list" aria-label="Saved routes"></ul>
+      <div id="saved-empty"><span aria-hidden="true">☆</span><h2>Your favourite routes, ready to ride.</h2><p>Finish or end a demo ride, then choose Save route on the summary page.</p><button id="saved-explore" class="primary" type="button">Choose a destination →</button></div>
     </section>
-    <dialog id="saved-tag-dialog" aria-labelledby="saved-tag-title"><form id="saved-tag-form"><h2 id="saved-tag-title">Name this place</h2><p id="saved-tag-place" class="muted"></p><label for="saved-tag">Label (optional)</label><input id="saved-tag" maxlength="30" placeholder="e.g. Uni, Work, Weekend ride" /><div class="saved-dialog-actions"><button type="button" class="secondary" id="saved-tag-cancel">Cancel</button><button class="primary" type="submit">Save label</button></div></form></dialog>
+    <dialog id="saved-tag-dialog" aria-labelledby="saved-tag-title"><form id="saved-tag-form"><h2 id="saved-tag-title">Name this route</h2><p id="saved-tag-place" class="muted"></p><label for="saved-tag">Label (optional)</label><input id="saved-tag" maxlength="30" placeholder="e.g. Uni, Work, Weekend ride" /><div class="saved-dialog-actions"><button type="button" class="secondary" id="saved-tag-cancel">Cancel</button><button class="primary" type="submit">Save label</button></div></form></dialog>
     <dialog id="report-dialog" aria-labelledby="report-title">
       <div class="dialog-heading">
         <div>
@@ -913,7 +914,7 @@
             <button id="demo-auth-submit" class="primary" type="submit">Log in →</button>
           </form>
           <button id="demo-auth-switch" class="text-button" type="button">New here? Create an account</button>
-          <p class="demo-auth-note">Classroom demo only. Accounts stay in this browser. Use a demo password. You can use all current features without logging in.</p>
+          <p class="demo-auth-note">Classroom demo only. Accounts stay in this browser. Use a demo password. You can plan and simulate rides without logging in. Log in to save and view your routes.</p>
           <button class="text-button" data-demo-close="demo-auth-dialog">Back to routes</button>
         </section>
       </div>

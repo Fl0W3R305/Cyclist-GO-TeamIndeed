@@ -48,3 +48,9 @@ node tests.cjs
 ```
 
 AI assistance: ChatGPT/Codex assisted with implementation, data processing, debugging and documentation. Review the code and update your team's detailed declaration to reflect the final work used.
+
+## Saved routes
+
+After finishing or ending a simulated ride, select **Save route** on the summary page. This saves the complete selected route, not only the distance travelled or the destination. Guests are prompted to log in or create a demo account; successful login saves the pending route automatically. Cancelling login leaves it unsaved.
+
+The Saved page requires login and displays only the current demo account's routes in this browser. Route geometry and calculated indicators are stored together; reopening restores that route and clears preference filters so it is visible. Labels, removal and Undo are supported. Old saved destinations are not converted into routes. Hazard-location drafts remain separate and unchanged. These browser-only accounts are for classroom demonstration, not secure production authentication.

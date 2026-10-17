@@ -1,4 +1,4 @@
-/* Classroom demo accounts only: local browser storage; no access restrictions. */
+/* Classroom demo accounts only: local browser storage; route saving requires a demo account. */
 (() => {
   const USERS = 'cyclist-go-demo-accounts-v1', SESSION = 'cyclist-go-demo-session-v1';
   const el = id => document.getElementById(id);
@@ -40,6 +40,7 @@
     const bits = await crypto.subtle.deriveBits({name:'PBKDF2',salt:Uint8Array.from(salt),iterations:100000,hash:'SHA-256'},key,256);
     return Array.from(new Uint8Array(bits), b => b.toString(16).padStart(2,'0')).join('');
   }
+  window.DemoAuth = { currentUser, openLogin() { mode(false); el('demo-auth-dialog').showModal(); } };
   el('demo-account-button').addEventListener('click', () => {
     update();
     if (currentUser()) el('demo-account-dialog').showModal();
@@ -78,6 +79,7 @@
       localStorage.setItem(SESSION,user.email);
       el('demo-auth-form').reset(); el('demo-auth-dialog').close(); update();
       if (typeof toast === 'function') toast('Welcome, '+user.name+'.');
+      document.dispatchEvent(new Event('cyclist:login'));
     } catch (error) {
       el('demo-auth-error').textContent = error.name === 'QuotaExceededError' || error.name === 'SecurityError' ? 'Browser storage is unavailable. Allow local storage and try again.' : error.message;
       el('demo-auth-error').hidden = false;
@@ -87,7 +89,7 @@
     try { localStorage.removeItem(SESSION); update(); el('demo-account-dialog').close(); }
     catch { el('demo-account-email').textContent = 'Could not log out. Browser storage is unavailable.'; }
   });
-  el('demo-auth-dialog').addEventListener('close', () => { if (!busy) el('demo-auth-form').reset(); });
+  el('demo-auth-dialog').addEventListener('close', () => { if (!busy) el('demo-auth-form').reset(); document.dispatchEvent(new Event('cyclist:authclosed')); });
   window.addEventListener('storage', update);
   update();
 })();
