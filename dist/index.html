@@ -240,14 +240,15 @@
         <p class="community-warning">Please share accurate, helpful information. Do not post false or misleading safety reports.</p>
         <div id="community-login-prompt"><p>Log in to create a post, like a post or comment.</p><button id="community-login" class="primary" type="button">Log in to participate →</button></div>
         <form id="community-post-form" hidden>
+          <label for="community-post-route">Share a saved route (optional)</label><select id="community-post-route"><option value="">No route attached</option></select><p id="community-route-help" class="muted"></p><div id="community-route-preview" hidden></div>
           <label for="community-post-title">Post title</label><input id="community-post-title" maxlength="90" required placeholder="What should other riders know?">
           <label for="community-post-body">Details</label><textarea id="community-post-body" maxlength="600" required rows="4" placeholder="Share a route tip, safety update or useful local information."></textarea>
-          <label for="community-post-category">Topic</label><select id="community-post-category"><option>Route tip</option><option>Safety update</option><option>Local cycling</option></select>
-          <label class="community-confirm"><input id="community-post-confirm" type="checkbox" required> I believe this information is accurate and respectful.</label>
+          <label for="community-post-category">Topic</label><select id="community-post-category"><option>Training</option><option>Scenic</option><option>Safe</option><option>Local cycling</option></select>
+          <label class="community-confirm"><input id="community-post-location" type="checkbox"> Attach my current location (optional, for closest sorting)</label><label class="community-confirm"><input id="community-post-confirm" type="checkbox" required> I believe this information is accurate and respectful.</label>
           <p id="community-post-error" class="error" role="alert" hidden></p><button class="primary" type="submit">Publish post</button>
         </form>
       </section>
-      <div class="community-feed-heading"><h2>Recent posts</h2><span id="community-count"></span></div>
+      <div class="community-feed-heading"><h2>Recent posts</h2><div class="community-feed-controls"><details id="community-filter" class="community-filter"><summary id="community-filter-label">Filter</summary><div class="community-filter-options" role="group" aria-label="Filter posts by topic"><button type="button" data-community-filter="Training" aria-pressed="false">Training</button><button type="button" data-community-filter="Scenic" aria-pressed="false">Scenic</button><button type="button" data-community-filter="Safe" aria-pressed="false">Safe</button><button type="button" id="community-filter-clear" hidden>Clear filter</button></div></details><details id="community-sort" class="community-filter"><summary id="community-sort-label">Sort</summary><div class="community-filter-options" role="group" aria-label="Sort posts"><button type="button" data-community-sort="newest" aria-pressed="false">newest</button><button type="button" data-community-sort="closest" aria-pressed="false">closest</button><button type="button" data-community-sort="most popular" aria-pressed="false">most popular</button></div></details></div></div><p id="community-sort-status" class="muted" role="status" hidden></p>
       <p id="community-empty" class="muted" hidden>No posts yet. Be the first to share a useful update.</p>
       <div id="community-feed" class="community-feed" aria-live="polite"></div>
     </section>
