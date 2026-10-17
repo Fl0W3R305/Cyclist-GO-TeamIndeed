@@ -24,6 +24,11 @@ function startRide() {
       title: "Simulated rider position",
     }).addTo(state.map);
   }
+  if (state.map && !state.map._hazardNoticeTracking) {
+    state.map._hazardNoticeTracking = true;
+    state.map.on('move zoom resize', queueHazardNotice);
+    window.addEventListener('resize', queueHazardNotice);
+  }
   updateRide();
 }
 function updateRide() {
@@ -56,6 +61,7 @@ function updateRide() {
     $("ride-title").textContent = "You’ve arrived.";
     $("finish-ride").textContent = "Finish & view summary";
   } else $("finish-ride").textContent = "End demo ride";
+  queueHazardNotice();
 }
 function advance(m) {
   state.progress = Math.min(1, state.progress + m / current().length);
@@ -118,4 +124,55 @@ function followRider() {
   state.followRider = true;
   state.map.setView(D.pointAt(current(), state.progress), 16, {animate: false});
   $("fit").textContent = "⌖ Following rider";
+}
+
+// Keep the notice near the rider, with space around markers and map controls.
+let hazardNoticeFrame = null;
+function queueHazardNotice() {
+  if (hazardNoticeFrame !== null) cancelAnimationFrame(hazardNoticeFrame);
+  hazardNoticeFrame = requestAnimationFrame(() => {
+    hazardNoticeFrame = null;
+    positionHazardNotice();
+  });
+}
+function chooseHazardNoticePosition(x, y, width, height, bounds, obstacles) {
+  const gap = 38, inset = 10;
+  const clamp = (v, max) => Math.max(inset, Math.min(v, max - inset));
+  const candidates = [
+    [x-width/2, y-gap-height], [x-width/2, y+gap],
+    [x+gap, y-height/2], [x-gap-width, y-height/2],
+  ].map(([left,top]) => [clamp(left,bounds.width-width),clamp(top,bounds.height-height)]);
+  // If the nearby positions are occupied, try other clear positions in the map.
+  const extra = [];
+  for (let top=inset; top+height<=bounds.height-inset; top+=24)
+    for (let left=inset; left+width<=bounds.width-inset; left+=24)
+      extra.push([left,top]);
+  extra.sort((a,b) => Math.hypot(a[0]+width/2-x,a[1]+height/2-y)-Math.hypot(b[0]+width/2-x,b[1]+height/2-y));
+  return [...candidates,...extra].find(([left,top]) =>
+    left>=inset && top>=inset && left+width<=bounds.width-inset && top+height<=bounds.height-inset &&
+    !obstacles.some(r => left<r.right && left+width>r.left && top<r.bottom && top+height>r.top)
+  );
+}
+function positionHazardNotice() {
+  if (state.view !== 'ride' || !state.map || !state.rider) return;
+  const notice = $('next-hazard'), map = state.map.getContainer();
+  const bounds = map.getBoundingClientRect();
+  const point = state.map.latLngToContainerPoint(state.rider.getLatLng());
+  const obstacles = [...map.querySelectorAll('.leaflet-marker-icon, .leaflet-control'),
+    ...map.parentElement.querySelectorAll('.map-top > *')].map(node => {
+      const r = node.getBoundingClientRect();
+      return {left:r.left-bounds.left-10, top:r.top-bounds.top-10,
+        right:r.right-bounds.left+10, bottom:r.bottom-bounds.top+10};
+    });
+  obstacles.push({left:point.x-30,top:point.y-30,right:point.x+30,bottom:point.y+30});
+  notice.style.position = 'absolute';
+  const position = chooseHazardNoticePosition(point.x, point.y, notice.offsetWidth, notice.offsetHeight, bounds, obstacles);
+  if (!position) {
+    // A crowded or very small map: keep the message readable in the ride panel.
+    notice.style.position = 'static';
+    return;
+  }
+  const parent = notice.offsetParent.getBoundingClientRect();
+  notice.style.left = (bounds.left-parent.left+position[0])+'px';
+  notice.style.top = (bounds.top-parent.top+position[1])+'px';
 }

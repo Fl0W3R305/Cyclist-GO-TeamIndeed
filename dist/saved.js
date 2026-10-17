@@ -26,7 +26,7 @@
       const list = read();
       el('saved-list').innerHTML = list.map(p => {
         const d = D.destinations.find(d => d.id === p.destination), r = p.route, id = escapeHTML(p.id);
-        return `<li class="saved-row"><button class="saved-open" data-saved-open="${id}" type="button"><span class="saved-place-icon" aria-hidden="true">${d.icon}</span><span><strong>${escapeHTML(p.tag || 'Indooroopilly → ' + d.name)}</strong><span class="saved-address">${escapeHTML(r.name)} · ${Number(r.km).toFixed(2)} km · ${Number(r.minutes)} min</span><span class="saved-address">${Math.round(r.bikeway*100)}% bikeways · ${Math.round(r.offroad*100)}% off-road</span><span class="saved-route-hint">View saved route →</span></span></button><div class="saved-row-tools"><button data-saved-tag="${id}" type="button">Label</button><button data-saved-remove="${id}" type="button">Remove</button></div></li>`;
+        return `<li class="saved-row"><button class="saved-open" data-saved-open="${id}" type="button"><span class="saved-place-icon" aria-hidden="true">${d.icon}</span><span><strong>${escapeHTML(p.tag || 'Indooroopilly → ' + d.name)}</strong><span class="saved-address">${escapeHTML(r.name)} · ${Number(r.km).toFixed(2)} km · ${Number(r.minutes)} min</span><span class="saved-address">${Math.round(r.bikeway*100)}% bikeways · ${Math.round(r.offroad*100)}% off-road</span><span class="saved-route-hint">View saved route →</span></span></button><div class="saved-row-tools"><button data-saved-share="${id}" type="button">Share</button><button data-saved-tag="${id}" type="button">Label</button><button data-saved-remove="${id}" type="button">Remove</button></div></li>`;
       }).join('');
       el('saved-empty').hidden = !user || list.length > 0;
       const r = current(), exists = r && list.some(p => p.id === identity(state.destination,r));
@@ -46,6 +46,23 @@
     if (saved) { render(); el('saved-title').focus(); }
     else setTimeout(() => { state.map?.invalidateSize(); if (current()) fit(); }, 0);
   }
+  function openSnapshot(p) {
+    if (state.view === 'ride') { toast('End your ride before opening a route.'); return; }
+        // Keep the exact stored path and measurements; clear filters so it is visible.
+        const routes = Preferences.evaluate(D.buildRoutes(p.destination));
+        const snapshot = JSON.parse(JSON.stringify(p.route));
+        const index = routes.findIndex(r => r.id === snapshot.id);
+        if (index < 0) throw new Error('Route mode unavailable');
+        routes[index] = snapshot;
+        Preferences.selected.clear(); Preferences.render();
+        chooseDestination(p.destination); state.routes=routes; state.selected=snapshot.id;
+        state.samples=sampleHazards(routes,p.destination); state.filter='all';
+        state.rider?.remove(); state.rider=null;
+        page(false); showView('compare'); applyPreferences(); fit(); el('start-ride').focus();
+    el('community-page').hidden = true;
+    el('nav-community').setAttribute('aria-current','false');
+  }
+  window.SavedRoutes = { list: read, open: openSnapshot };
   function saveRoute(snapshot) {
     if (!owner()) return;
     try {
@@ -70,19 +87,15 @@
     if (!owner()) { render(); return; }
     try {
       const list = read(), open = e.target.closest('[data-saved-open]'), tag = e.target.closest('[data-saved-tag]'), remove = e.target.closest('[data-saved-remove]');
+      const share = e.target.closest('[data-saved-share]');
+      if (share) {
+        const p = list.find(p => p.id === share.dataset.savedShare);
+        if (p) document.dispatchEvent(new CustomEvent('cyclist:share-route', {detail:{id:p.id}}));
+        return;
+      }
       if (open) {
         const p = list.find(p => p.id === open.dataset.savedOpen); if (!p) return;
-        // Keep the exact stored path and measurements; clear filters so it is visible.
-        const routes = Preferences.evaluate(D.buildRoutes(p.destination));
-        const snapshot = JSON.parse(JSON.stringify(p.route));
-        const index = routes.findIndex(r => r.id === snapshot.id);
-        if (index < 0) throw new Error('Route mode unavailable');
-        routes[index] = snapshot;
-        Preferences.selected.clear(); Preferences.render();
-        chooseDestination(p.destination); state.routes=routes; state.selected=snapshot.id;
-        state.samples=sampleHazards(routes,p.destination); state.filter='all';
-        state.rider?.remove(); state.rider=null;
-        page(false); showView('compare'); applyPreferences(); fit(); el('start-ride').focus();
+        openSnapshot(p);
       }
       if (tag) {
         const p = list.find(p => p.id === tag.dataset.savedTag); if (!p) return;

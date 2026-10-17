@@ -106,7 +106,7 @@ body.riding-mode #ride-view>.muted {grid-column:2; margin:5px 0; font-size:12px;
 body.riding-mode .ride-actions {grid-column:2; display:flex; gap:16px; margin-top:8px; align-items:stretch;}
 body.riding-mode .ride-actions button {flex:1; margin:0; min-height:46px; width:auto; font-size:14px;}
 body.riding-mode #finish-ride {border:1px solid #b5c5d2; border-radius:9px; padding:10px; background:white; color:#8a302d;}
-body.riding-mode #next-hazard {position:absolute; top:76px; left:50%; transform:translateX(-50%); width:min(460px,calc(100% - 100px)); z-index:450; margin:0; background:white; border-radius:12px; box-shadow:0 4px 18px #18385422;}
+body.riding-mode #next-hazard {position:absolute; top:76px; right:auto; left:16px; transform:none; width:min(280px,calc(100% - 32px)); padding:8px 10px; font-size:12px; z-index:450; margin:0; background:white; border-radius:12px; box-shadow:0 4px 18px #18385422;}
 #summary-report {margin-bottom:16px;}
 @media(max-width:650px) {
  body.riding-mode main {height:calc(100dvh - 64px);}
@@ -122,3 +122,8 @@ body.riding-mode #next-hazard {position:absolute; top:76px; left:50%; transform:
  body.riding-mode .ride-actions {margin-top:2px; gap:14px;}
  body.riding-mode #next-hazard {top:64px;}
 }
+
+body.riding-mode #next-hazard button {font-size:12px; line-height:1.4;}
+body.riding-mode #next-hazard small {font-size:11px; margin-top:3px;}
+
+body.riding-mode #next-hazard {grid-column:1 / -1;}
