@@ -54,3 +54,7 @@ AI assistance: ChatGPT/Codex assisted with implementation, data processing, debu
 After finishing or ending a simulated ride, select **Save route** on the summary page. This saves the complete selected route, not only the distance travelled or the destination. Guests are prompted to log in or create a demo account; successful login saves the pending route automatically. Cancelling login leaves it unsaved.
 
 The Saved page requires login and displays only the current demo account's routes in this browser. Route geometry and calculated indicators are stored together; reopening restores that route and clears preference filters so it is visible. Labels, removal and Undo are supported. Old saved destinations are not converted into routes. Hazard-location drafts remain separate and unchanged. These browser-only accounts are for classroom demonstration, not secure production authentication.
+
+## Community
+
+Community is a browser-only demonstration. Guests can read the sample and locally created posts. Demo accounts can create posts, like and unlike posts, and add comments. The feed, likes and comments use this browser's local storage; they are not shared between browsers or devices and are not uploaded to a database. A reminder asks users to share accurate, respectful information before publishing. This is not a live or moderated reporting service.

@@ -42,6 +42,7 @@ const files = [
   "app.js",
   "auth.js",
   "saved.js",
+  "community.js",
 ];
 w.eval(
   files.map((f) => fs.readFileSync(path.join(root, f), "utf8")).join("\n") +
@@ -262,6 +263,14 @@ assert.equal(w.document.querySelectorAll('#about-dialog details').length,20);
 (async () => {
 Object.defineProperty(w, 'crypto', {value:require('node:crypto').webcrypto});
 w.TextEncoder = TextEncoder;
+click('#nav-community');
+assert.equal($('community-page').hidden,false);
+assert.equal(w.document.querySelectorAll('.community-post').length,2);
+assert.equal($('community-post-form').hidden,true);
+click('[data-like="sample-uq-path"]');
+assert.equal($('demo-auth-dialog').open,true,'guest interaction opens login');
+$('demo-auth-dialog').close();$('demo-auth-dialog').dispatchEvent(new w.Event('close'));
+click('#nav-mvp');assert.equal($('community-page').hidden,true);
 click('#nav-saved');
 assert.equal($('saved-login').hidden,false);
 assert.equal(w.document.querySelectorAll('.saved-row').length,0);
@@ -276,6 +285,20 @@ input('demo-name','Test Rider');input('demo-email','one@test.com');input('demo-p
 $('demo-auth-form').dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));
 for(let i=0;i<100 && $('demo-auth-submit').disabled;i++) await new Promise(r=>setTimeout(r,10));
 assert.equal($('demo-auth-error').hidden,true,$('demo-auth-error').textContent);
+click('#nav-community');
+assert.equal($('community-post-form').hidden,false,'logged in user can create posts');
+click('[data-like="sample-uq-path"]');
+assert.ok(JSON.parse(w.localStorage.getItem('cyclist-go-community-v1')).find(p=>p.id==='sample-uq-path').likes.includes('one@test.com'));
+click('[data-comments="sample-uq-path"]');
+input('comment-sample-uq-path','Please take care near the crossing.');
+click('[data-comment-form="sample-uq-path"] button[type="submit"]');
+assert.equal(JSON.parse(w.localStorage.getItem('cyclist-go-community-v1')).find(p=>p.id==='sample-uq-path').comments.length,1);
+input('community-post-title','Useful route update');input('community-post-body','<img src=x onerror=alert(1)> Keep left on the shared path.');
+$('community-post-category').value='Route tip';$('community-post-confirm').checked=true;
+$('community-post-form').dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));
+assert.ok(JSON.parse(w.localStorage.getItem('cyclist-go-community-v1')).some(p=>p.title==='Useful route update'));
+assert.equal(w.document.querySelectorAll('#community-feed img').length,0,'community text is escaped');
+click('#nav-mvp');
 const savedKey='cyclist-go-saved-routes-v1:one@test.com';
 let list=JSON.parse(w.localStorage.getItem(savedKey));
 assert.equal(list.length,1);

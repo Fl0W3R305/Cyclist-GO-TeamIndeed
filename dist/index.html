@@ -32,6 +32,8 @@
     <script defer src="auth.js"></script>
     <link rel="stylesheet" href="saved.css" />
     <script defer src="saved.js"></script>
+    <link rel="stylesheet" href="community.css" />
+    <script defer src="community.js"></script>
   </head>
   <body>
     <header>
@@ -39,7 +41,7 @@
         ><span class="brand-icon">↗</span>Cyclist Go<span class="demo"
           >DEMO</span
         ></a
-      ><nav class="page-nav" aria-label="Main navigation"><button id="nav-mvp" aria-current="page" type="button">MVP</button><button id="nav-saved" type="button">Saved</button></nav><div class="demo-header-actions"><button class="text-button" id="about-button">About Us</button><button id="demo-account-button" type="button">Log in</button></div>
+      ><nav class="page-nav" aria-label="Main navigation"><button id="nav-mvp" aria-current="page" type="button">MVP</button><button id="nav-saved" type="button">Saved</button><button id="nav-community" type="button">Community</button></nav><div class="demo-header-actions"><button class="text-button" id="about-button">About Us</button><button id="demo-account-button" type="button">Log in</button></div>
     </header>
     <main id="mvp-page">
       <aside class="planner">
@@ -229,6 +231,25 @@
       <div id="saved-login" hidden><h2>Log in to view your saved routes</h2><p>Save routes after a ride and find them here when you return.</p><button id="saved-login-button" class="primary" type="button">Log in</button></div>
       <ul id="saved-list" aria-label="Saved routes"></ul>
       <div id="saved-empty"><span aria-hidden="true">☆</span><h2>Your favourite routes, ready to ride.</h2><p>Finish or end a demo ride, then choose Save route on the summary page.</p><button id="saved-explore" class="primary" type="button">Choose a destination →</button></div>
+    </section>
+    <section id="community-page" aria-labelledby="community-title" hidden>
+      <div class="community-heading"><div><p class="eyebrow">CYCLIST GO / BRISBANE</p><h1 id="community-title" tabindex="-1">Community</h1><p class="lead">Local riders sharing useful route and safety information.</p></div></div>
+      <p class="community-storage-note">Demo community: posts, likes and comments are saved in this browser only.</p>
+      <section class="community-compose" aria-labelledby="community-compose-title">
+        <h2 id="community-compose-title">Share with the community</h2>
+        <p class="community-warning">Please share accurate, helpful information. Do not post false or misleading safety reports.</p>
+        <div id="community-login-prompt"><p>Log in to create a post, like a post or comment.</p><button id="community-login" class="primary" type="button">Log in to participate →</button></div>
+        <form id="community-post-form" hidden>
+          <label for="community-post-title">Post title</label><input id="community-post-title" maxlength="90" required placeholder="What should other riders know?">
+          <label for="community-post-body">Details</label><textarea id="community-post-body" maxlength="600" required rows="4" placeholder="Share a route tip, safety update or useful local information."></textarea>
+          <label for="community-post-category">Topic</label><select id="community-post-category"><option>Route tip</option><option>Safety update</option><option>Local cycling</option></select>
+          <label class="community-confirm"><input id="community-post-confirm" type="checkbox" required> I believe this information is accurate and respectful.</label>
+          <p id="community-post-error" class="error" role="alert" hidden></p><button class="primary" type="submit">Publish post</button>
+        </form>
+      </section>
+      <div class="community-feed-heading"><h2>Recent posts</h2><span id="community-count"></span></div>
+      <p id="community-empty" class="muted" hidden>No posts yet. Be the first to share a useful update.</p>
+      <div id="community-feed" class="community-feed" aria-live="polite"></div>
     </section>
     <dialog id="saved-tag-dialog" aria-labelledby="saved-tag-title"><form id="saved-tag-form"><h2 id="saved-tag-title">Name this route</h2><p id="saved-tag-place" class="muted"></p><label for="saved-tag">Label (optional)</label><input id="saved-tag" maxlength="30" placeholder="e.g. Uni, Work, Weekend ride" /><div class="saved-dialog-actions"><button type="button" class="secondary" id="saved-tag-cancel">Cancel</button><button class="primary" type="submit">Save label</button></div></form></dialog>
     <dialog id="report-dialog" aria-labelledby="report-title">
@@ -914,7 +935,7 @@
             <button id="demo-auth-submit" class="primary" type="submit">Log in →</button>
           </form>
           <button id="demo-auth-switch" class="text-button" type="button">New here? Create an account</button>
-          <p class="demo-auth-note">Classroom demo only. Accounts stay in this browser. Use a demo password. You can plan and simulate rides without logging in. Log in to save and view your routes.</p>
+          <p class="demo-auth-note">Classroom demo only. Accounts stay in this browser. Use a demo password. You can plan and simulate rides without logging in. Log in to save routes or join the community.</p>
           <button class="text-button" data-demo-close="demo-auth-dialog">Back to routes</button>
         </section>
       </div>
