@@ -21,6 +21,8 @@
     <script defer src="routes.js"></script>
     <script defer src="core.js"></script>
     <script defer src="planner.js"></script>
+    <script defer src="data/clean-basemap.js"></script>
+    <script defer src="clean-map.js"></script>
     <script defer src="map.js"></script>
     <script defer src="hazards.js"></script>
     <script defer src="ride.js"></script>
@@ -28,6 +30,8 @@
     <script defer src="app.js"></script>
       <link rel="stylesheet" href="auth.css" />
     <script defer src="auth.js"></script>
+    <link rel="stylesheet" href="saved.css" />
+    <script defer src="saved.js"></script>
   </head>
   <body>
     <header>
@@ -35,9 +39,9 @@
         ><span class="brand-icon">↗</span>Cyclist Go<span class="demo"
           >DEMO</span
         ></a
-      ><div class="demo-header-actions"><button class="text-button" id="about-button">About Us</button><button id="demo-account-button" type="button">Log in</button></div>
+      ><nav class="page-nav" aria-label="Main navigation"><button id="nav-mvp" aria-current="page" type="button">MVP</button><button id="nav-saved" type="button">Saved</button></nav><div class="demo-header-actions"><button class="text-button" id="about-button">About Us</button><button id="demo-account-button" type="button">Log in</button></div>
     </header>
-    <main>
+    <main id="mvp-page">
       <aside class="planner">
         <nav class="steps" aria-label="Ride progress">
           <span data-step="plan" class="active">1 <b>Destination</b></span
@@ -81,6 +85,7 @@
               aria-label="Available destinations"
             ></div>
             <p id="form-error" role="alert" class="error" hidden></p>
+            <button type="button" class="save-place-button" data-save-place disabled>Save destination</button>
             <div data-preference-panel></div>
             <button class="primary" type="submit">
               Find my routes <span>→</span>
@@ -103,6 +108,7 @@
           </button>
           <h1 class="small-title">Choose your route</h1>
           <p class="destination-label"></p>
+          <button type="button" class="save-place-button" data-save-place>Save destination</button>
           <div class="section-title">
             <h2>Three route preferences</h2>
             <span>Tap to explore</span>
@@ -207,15 +213,23 @@
             ><label
               ><input type="checkbox" id="bikeway-toggle" />BCC network</label
             ><label><input type="checkbox" id="sections-toggle" />Section colours</label>
-          </div>
+          <label><input type="checkbox" id="climbs-toggle" />Climbs</label></div>
           <div class="section-legend" id="section-legend" hidden><span style="color:#078773">━ Off-road</span><span style="color:#0875ed">━ Other bikeway</span><span style="color:#a66a00">━ On-road</span><span style="color:#718294">┄ Unknown</span><span style="color:#9c3eb1">▲ Estimated climb</span></div>
           <p id="data-status" role="status"></p>
           <div class="map-caption">
-            Saved cycling routes · Sample hazards · Not live navigation
+            Local simplified OSM map · Sample hazards · Simulated riding
           </div>
         </div>
       </section>
     </main>
+    <section id="saved-page" aria-labelledby="saved-title" hidden>
+      <div class="saved-heading"><div><p class="eyebrow">YOUR REGULAR STOPS</p><h1 id="saved-title" tabindex="-1">Saved places</h1><p class="lead">Tap a place. Choose your route. Get going.</p></div><button id="saved-add" class="secondary" type="button">+ Save a place</button></div>
+      <p id="saved-scope" class="muted"></p>
+      <p id="saved-error" class="error" role="alert" hidden></p>
+      <ul id="saved-list" aria-label="Saved destinations"></ul>
+      <div id="saved-empty"><span aria-hidden="true">☆</span><h2>Your regular stops, one tap away.</h2><p>Choose a destination in MVP and tap Save destination.</p><button id="saved-explore" class="primary" type="button">Choose a destination →</button></div>
+    </section>
+    <dialog id="saved-tag-dialog" aria-labelledby="saved-tag-title"><form id="saved-tag-form"><h2 id="saved-tag-title">Name this place</h2><p id="saved-tag-place" class="muted"></p><label for="saved-tag">Label (optional)</label><input id="saved-tag" maxlength="30" placeholder="e.g. Uni, Work, Weekend ride" /><div class="saved-dialog-actions"><button type="button" class="secondary" id="saved-tag-cancel">Cancel</button><button class="primary" type="submit">Save label</button></div></form></dialog>
     <dialog id="report-dialog" aria-labelledby="report-title">
       <div class="dialog-heading">
         <div>

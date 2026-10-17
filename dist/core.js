@@ -53,6 +53,7 @@ function dest() {
 }
 function showView(view) {
   state.view = view;
+  document.dispatchEvent(new Event("cyclist:view"));
   ["plan", "compare", "ride", "summary"].forEach(
     (v) => ($(v + "-view").hidden = v !== view),
   );

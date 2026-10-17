@@ -16,6 +16,7 @@
     el('demo-account-button').textContent = user ? user.name : 'Log in';
     el('demo-account-name').textContent = user?.name || '';
     el('demo-account-email').textContent = user?.email || '';
+    document.dispatchEvent(new Event('cyclist:account'));
   }
   function mode(value) {
     register = value;

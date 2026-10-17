@@ -27,16 +27,21 @@ Object.defineProperty(w.HTMLElement.prototype, "clientHeight", {
 });
 w.eval(fs.readFileSync(path.join(root, "vendor/leaflet.js"), "utf8"));
 w.L.Browser.svg = true;
+w.L.Browser.canvas = false;
 const files = [
   "data/bcc-data.js",
   "routes.js",
   "core.js",
   "planner.js",
+  "data/clean-basemap.js",
+  "clean-map.js",
   "map.js",
   "hazards.js",
   "ride.js",
   "preferences.js",
   "app.js",
+  "auth.js",
+  "saved.js",
 ];
 w.eval(
   files.map((f) => fs.readFileSync(path.join(root, f), "utf8")).join("\n") +
@@ -253,6 +258,53 @@ click('#submit-report');
 assert.equal(w.testAPI.state.drafts.length, draftCountBefore);
 assert.ok(w.testAPI.state.reports.some(r => r.note === 'Saved during ride, completed afterwards'));
 assert.equal(w.document.querySelectorAll('#about-dialog details').length,20);
+// Saved places extension: destination-only storage and direct route comparison.
+w.eval('showView("plan"); chooseDestination("uq")');
+click('[data-save-place]'); click('[data-save-place]');
+assert.equal(JSON.parse(w.localStorage.getItem('cyclist-go-saved-places-v1:guest')).length,1);
+click('#nav-saved');
+assert.equal(w.document.querySelector('#saved-page').hidden,false);
+assert.equal(w.document.querySelectorAll('.saved-row').length,1);
+click('[data-saved-tag="uq"]');
+input('saved-tag','<img src=x onerror=alert(1)>');
+w.document.querySelector('#saved-tag-form').dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));
+assert.equal(w.document.querySelectorAll('#saved-list img').length,0);
+click('[data-saved-open="uq"]');
+assert.equal(w.testAPI.state.destination,'uq');
+assert.equal(w.testAPI.state.view,'compare');
+assert.equal(w.document.querySelector('#mvp-page').hidden,false);
+assert.equal(w.testAPI.state.routes.length,3);
+const lines = w.testAPI.state.routeLayers.filter(l => l instanceof w.L.Polyline);
+assert.equal(lines.length,3);
+assert.equal(lines.filter(l => l.options.opacity === 1).length,1);
+assert.equal(lines.filter(l => l.options.opacity === 0.5).length,2);
+click('[data-route="scenic"]');
+assert.equal(w.testAPI.state.routeLayers.filter(l => l instanceof w.L.Polyline).length,3);
+assert.ok(w.testAPI.state.routeLayers.some(l => l.options.color === '#078773' && l.options.opacity === 1));
+
+click('#nav-saved'); click('[data-saved-remove="uq"]');
+assert.equal(w.document.querySelectorAll('.saved-row').length,0);
+click('#undo-report');
+assert.equal(w.document.querySelectorAll('.saved-row').length,1);
+// Switching demo accounts never exposes another account's saved list.
+w.localStorage.setItem('cyclist-go-demo-accounts-v1',JSON.stringify([{email:'one@test',name:'One'},{email:'two@test',name:'Two'}]));
+w.localStorage.setItem('cyclist-go-demo-session-v1','one@test');
+w.document.dispatchEvent(new w.Event('cyclist:account'));
+assert.equal(w.document.querySelectorAll('.saved-row').length,0);
+click('#saved-add'); w.eval('chooseDestination("cityhall")'); click('[data-save-place]');
+click('#nav-saved');
+assert.equal(w.document.querySelectorAll('.saved-row').length,1);
+w.localStorage.setItem('cyclist-go-demo-session-v1','two@test');
+w.document.dispatchEvent(new w.Event('cyclist:account'));
+assert.equal(w.document.querySelectorAll('.saved-row').length,0);
+w.localStorage.removeItem('cyclist-go-demo-session-v1');
+w.document.dispatchEvent(new w.Event('cyclist:account'));
+assert.equal(w.document.querySelectorAll('.saved-row').length,1);
+click('[data-saved-open="uq"]'); click('#start-ride');
+assert.equal(w.document.querySelector('#nav-saved').disabled,true);
+click('#finish-ride');
+assert.equal(w.document.querySelector('#nav-saved').disabled,false);
+console.log('PASS: Saved persistence, duplicate prevention, labels/escaping, remove/undo, direct comparison, account separation and ride navigation guard.');
 dom.window.close();
 console.log(
   "PASS: saved OSM edge provenance, connected routes, preferences + empty state, missing data, module integration, hazard feedback, local reporting, escaping, undo, ride completion and replanning.",

@@ -230,3 +230,9 @@
     gap: 4px;
   }
 }
+
+/* Clean background only: route and hazard colours are not filtered. */
+#map{background:#f8f9f7}
+.clean-map-label{color:#73828c;font-size:11px;line-height:20px;text-align:center;white-space:nowrap;text-shadow:0 1px 2px #fff,1px 0 2px #fff,-1px 0 2px #fff;pointer-events:none}
+.map-legend{flex-wrap:wrap}
+@media(max-width:700px){.map-legend label:last-child{display:inline-flex}}

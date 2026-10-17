@@ -21,6 +21,7 @@ function chooseDestination(id) {
   $("destination").value = dest().name;
   $("form-error").hidden = true;
   renderSuggestions();
+  document.dispatchEvent(new Event("cyclist:destination"));
 }
 function plan(event) {
   event?.preventDefault();
@@ -94,6 +95,7 @@ function setupPlanner() {
   $("planner-form").addEventListener("submit", plan);
   $("destination").addEventListener("input", () => {
     state.destination = null;
+    document.dispatchEvent(new Event("cyclist:destination"));
     renderSuggestions();
     $("form-error").hidden = true;
   });

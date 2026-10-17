@@ -262,6 +262,7 @@ function setupHazards() {
   });
   $("submit-report").addEventListener("click", submitReport);
   $("undo-report").addEventListener("click", () => {
+    if (typeof state.undo === "function") { const undo = state.undo; state.undo = null; undo(); $("toast").hidden = true; return; }
     state.reports = state.reports.filter((h) => h.id !== state.undo);
     state.rideReportCount = Math.max(0, state.rideReportCount - 1);
     save();

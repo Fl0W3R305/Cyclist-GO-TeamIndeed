@@ -22,20 +22,7 @@ function initMap() {
       l.bindPopup(el);
     },
   });
-  let errors = 0;
-  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    maxZoom: 19,
-    attribution:
-      '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-  })
-    .on("tileerror", () => {
-      if (++errors > 1) {
-        $("map-error").hidden = false;
-        $("map-error").textContent =
-          "Map tiles unavailable. Reconnect to the internet and reload; saved routes and demo controls still work.";
-      }
-    })
-    .addTo(state.map);
+  setupCleanBasemap();
   drawEndpoints();
 }
 function drawEndpoints() {
@@ -71,8 +58,8 @@ function drawRoutes() {
     const active = r.id === state.selected;
     const line = L.polyline(r.points, {
       color: r.color,
-      weight: active ? 6 : 4,
-      opacity: active ? 0.9 : 0.28,
+      weight: active ? 7 : 4,
+      opacity: active ? 1 : 0.5,
       dashArray: Preferences.accepts(r) ? null : "6 8",
       smoothFactor: 0,
     })
@@ -83,7 +70,7 @@ function drawRoutes() {
   });
   if ($("sections-toggle").checked) drawRouteSections();
   $("section-legend").hidden = !$("sections-toggle").checked;
-  drawClimbs();
+  if ($("climbs-toggle").checked) drawClimbs();
   drawHazards();
 }
 function drawHazards() {
@@ -110,8 +97,11 @@ function drawHazards() {
 function fit() {
   if (!state.map) return;
   const r = current();
-  if (r)
-    state.map.fitBounds(r.points, {
+  const points = state.view === "compare"
+    ? state.routes.flatMap(route => route.points)
+    : r?.points;
+  if (points?.length)
+    state.map.fitBounds(points, {
       paddingTopLeft: [40, 70],
       paddingBottomRight: [50, 95],
       maxZoom: 16,
@@ -133,6 +123,7 @@ function loadBikeways() {
 function setupMap() {
   $("fit").addEventListener("click", () => state.view === "ride" ? followRider() : fit());
   $("sections-toggle").addEventListener("change", drawRoutes);
+  $("climbs-toggle").addEventListener("change", drawRoutes);
   $("hazards-toggle").addEventListener("change", drawHazards);
   $("bikeway-toggle").addEventListener("change", (e) => {
     if (!state.map) return;
