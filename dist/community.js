@@ -8,10 +8,7 @@
   ];
   const el = id => document.getElementById(id);
   let posts = read(), openComments = new Set(), activeFilter = '', activeSort = '', viewerLocation = null;
-<<<<<<< HEAD
-=======
   let previousPage = 'nav-mvp';
->>>>>>> 89e4d58b29161ea644adcd276fdfa8ab9f6326ee
   const topicWords = {
     Training: /\b(train(?:ing)?|workouts?|fitness|intervals?|hill[s]?|climb(?:s|ing)?|endurance|laps?|sprints?|exercise)\b/gi,
     Scenic: /\b(scenic|scenery|views?|riverside|river|parks?|sunsets?|relax(?:ed|ing)?|pleasant|beautiful|nature)\b/gi,
@@ -190,13 +187,10 @@
       el('community-filter-label').focus();
     }
   });
-<<<<<<< HEAD
-=======
   el('community-back').addEventListener('click', () => {
     el(previousPage).click();
     el(previousPage).focus();
   });
->>>>>>> 89e4d58b29161ea644adcd276fdfa8ab9f6326ee
   el('nav-community').addEventListener('click', showPage);
   el('nav-mvp').addEventListener('click', hidePage);
   el('nav-saved').addEventListener('click', hidePage);
@@ -252,10 +246,7 @@
     const title = el('community-post-title').value.trim(), body = el('community-post-body').value.trim();
     if (!title || !body) return;
     el('community-post-error').hidden = true;
-<<<<<<< HEAD
-=======
     el('community-post-success').hidden = true;
->>>>>>> 89e4d58b29161ea644adcd276fdfa8ab9f6326ee
     let sharedRoute = null;
     try {
       const selected = selectedRoute();
@@ -280,16 +271,12 @@
       if (!user() || user().email !== email) return;
     }
     posts.push({sharedRoute,location,id:`post-${Date.now()}-${Math.random().toString(36).slice(2,8)}`,title,body,category,author,created:new Date().toISOString(),sample:false,likes:[],dislikes:[],comments:[]});
-<<<<<<< HEAD
-    if (persist()) { form.reset(); activeFilter = ''; activeSort = 'newest'; el('community-sort-status').hidden = true; render(); el('community-feed').scrollIntoView({behavior:'smooth', block:'start'}); }
-=======
     if (persist()) {
       form.reset(); activeFilter = ''; activeSort = 'newest'; el('community-sort-status').hidden = true; render();
       el('community-post-success').textContent = 'Post published successfully.';
       el('community-post-success').hidden = false;
       el('community-post-success').scrollIntoView({behavior:'smooth', block:'start'});
     }
->>>>>>> 89e4d58b29161ea644adcd276fdfa8ab9f6326ee
   });
   render();
 })();
