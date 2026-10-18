@@ -34,6 +34,8 @@
     <script defer src="saved.js"></script>
     <link rel="stylesheet" href="community.css" />
     <script defer src="community.js"></script>
+    <link rel="stylesheet" href="privacy.css" />
+    <script defer src="privacy.js"></script>
   </head>
   <body>
     <header>
@@ -233,6 +235,7 @@
       <div id="saved-empty"><span aria-hidden="true">☆</span><h2>Your favourite routes, ready to ride.</h2><p>Finish or end a demo ride, then choose Save route on the summary page.</p><button id="saved-explore" class="primary" type="button">Choose a destination →</button></div>
     </section>
     <section id="community-page" aria-labelledby="community-title" hidden>
+      <button id="community-back" class="back" type="button">← Back</button>
       <div class="community-heading"><div><p class="eyebrow">CYCLIST GO / BRISBANE</p><h1 id="community-title" tabindex="-1">Community</h1><p class="lead">Local riders sharing useful route and safety information.</p></div></div>
       <p class="community-storage-note">Demo community: posts, likes and comments are saved in this browser only.</p>
       <section class="community-compose" aria-labelledby="community-compose-title">
@@ -248,6 +251,10 @@
           <p id="community-post-error" class="error" role="alert" hidden></p><button class="primary" type="submit">Publish post</button>
         </form>
       </section>
+<<<<<<< HEAD
+=======
+      <p id="community-post-success" role="status" hidden></p>
+>>>>>>> 89e4d58b29161ea644adcd276fdfa8ab9f6326ee
       <div class="community-feed-heading"><h2>Recent posts</h2><div class="community-feed-controls"><details id="community-filter" class="community-filter"><summary id="community-filter-label">Filter</summary><div class="community-filter-options" role="group" aria-label="Filter posts by topic"><button type="button" data-community-filter="Training" aria-pressed="false">Training</button><button type="button" data-community-filter="Scenic" aria-pressed="false">Scenic</button><button type="button" data-community-filter="Safe" aria-pressed="false">Safe</button><button type="button" id="community-filter-clear" hidden>Clear filter</button></div></details><details id="community-sort" class="community-filter"><summary id="community-sort-label">Sort</summary><div class="community-filter-options" role="group" aria-label="Sort posts"><button type="button" data-community-sort="newest" aria-pressed="false">newest</button><button type="button" data-community-sort="closest" aria-pressed="false">closest</button><button type="button" data-community-sort="most popular" aria-pressed="false">most popular</button></div></details></div></div><p id="community-sort-status" class="muted" role="status" hidden></p>
       <p id="community-empty" class="muted" hidden>No posts yet. Be the first to share a useful update.</p>
       <div id="community-feed" class="community-feed" aria-live="polite"></div>
@@ -944,6 +951,18 @@
     <dialog id="demo-account-dialog" aria-labelledby="demo-account-title">
       <div class="dialog-heading"><h2 id="demo-account-title">Your account</h2><button class="icon-button" data-demo-close="demo-account-dialog" aria-label="Close account">×</button></div>
       <p id="demo-account-name"></p><p id="demo-account-email"></p><p class="demo-auth-note">Demo account saved in this browser.</p><button id="demo-logout" class="secondary">Log out</button>
+    </dialog>
+    <dialog id="privacy-permissions-dialog" aria-labelledby="privacy-permissions-title" aria-describedby="privacy-permissions-description">
+      <p class="privacy-eyebrow">WELCOME TO CYCLIST GO</p>
+      <h2 id="privacy-permissions-title">Privacy &amp; Permissions</h2>
+      <div id="privacy-permissions-description">
+        <p>Cyclist Go uses your location to support route planning and navigation, and cookies or local storage to remember your preferences, saved routes and account session.</p>
+        <p>By selecting “Allow”, you agree to these uses. You can manage your permissions in your browser settings.</p>
+      </div>
+      <div class="privacy-actions">
+        <button id="privacy-allow" class="primary" type="button">Allow</button>
+        <button id="privacy-not-now" class="secondary" type="button" autofocus>Not now</button>
+      </div>
     </dialog>
   </body>
 </html>

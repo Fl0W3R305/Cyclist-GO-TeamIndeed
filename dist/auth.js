@@ -1,6 +1,8 @@
 /* Classroom demo accounts only: local browser storage; route saving requires a demo account. */
 (() => {
-  const USERS = 'cyclist-go-demo-accounts-v1', SESSION = 'cyclist-go-demo-session-v1';
+  const USERS = 'cyclist-go-demo-accounts-v1';
+  // Each fresh page load starts logged out for repeated demonstrations.
+  let activeEmail = null;
   const el = id => document.getElementById(id);
   let register = false, busy = false;
   function accounts() {
@@ -9,7 +11,7 @@
     return value;
   }
   function currentUser() {
-    try { return accounts().find(u => u.email === localStorage.getItem(SESSION)); } catch { return null; }
+    try { return accounts().find(u => u.email === activeEmail); } catch { return null; }
   }
   function update() {
     const user = currentUser();
@@ -76,7 +78,7 @@
         user = users.find(u => u.email === email);
         if (!user || await hash(password,user.salt) !== user.hash) throw new Error('Email or password is incorrect.');
       }
-      localStorage.setItem(SESSION,user.email);
+      activeEmail = user.email;
       el('demo-auth-form').reset(); el('demo-auth-dialog').close(); update();
       if (typeof toast === 'function') toast('Welcome, '+user.name+'.');
       document.dispatchEvent(new Event('cyclist:login'));
@@ -86,7 +88,7 @@
     } finally { busy = false; el('demo-auth-submit').disabled = false; el('demo-auth-switch').disabled = false; }
   });
   el('demo-logout').addEventListener('click', () => {
-    try { localStorage.removeItem(SESSION); update(); el('demo-account-dialog').close(); }
+    try { activeEmail = null; update(); el('demo-account-dialog').close(); }
     catch { el('demo-account-email').textContent = 'Could not log out. Browser storage is unavailable.'; }
   });
   el('demo-auth-dialog').addEventListener('close', () => { if (!busy) el('demo-auth-form').reset(); document.dispatchEvent(new Event('cyclist:authclosed')); });

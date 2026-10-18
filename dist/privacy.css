@@ -1,0 +1,17 @@
+#privacy-permissions-dialog {
+  width: min(520px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  padding: 32px;
+  border: 1px solid #e1e8f0;
+  border-radius: 20px;
+  color: #152c43;
+  background: #fff;
+  box-shadow: 0 24px 70px rgba(21, 44, 67, .22);
+}
+#privacy-permissions-dialog::backdrop { background: rgba(21, 44, 67, .48); }
+#privacy-permissions-dialog .privacy-eyebrow { color: #0875ed; font-size: 12px; font-weight: 700; letter-spacing: .08em; margin: 0 0 12px; }
+#privacy-permissions-dialog h2 { margin: 0 0 18px; font-size: 26px; line-height: 1.25; }
+#privacy-permissions-description p { color: #5e7083; font-size: 15px; line-height: 1.7; margin: 0 0 14px; }
+#privacy-permissions-dialog .privacy-actions { display: flex; gap: 12px; margin-top: 24px; }
+#privacy-permissions-dialog .privacy-actions button { flex: 1; min-height: 46px; margin: 0; }
+@media (max-width: 480px) { #privacy-permissions-dialog { padding: 24px; } }
